@@ -8,6 +8,7 @@ package { 'libtool': ensure => present }
 package { 'darcs': ensure => present }
 package { 'libncurses5-dev': ensure => present }
 package { 'libbz2-dev': ensure => present }
+package { 'default-jre': ensure => present }
 user { 'build': ensure => present }
 file { '/home/build': ensure => directory, owner => build, group => build }
 vcsrepo { '/home/build/ghcjs-ghc':

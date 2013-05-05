@@ -6,6 +6,7 @@ package { 'alex': ensure => present }
 package { 'autoconf': ensure => present }
 package { 'libtool': ensure => present }
 package { 'darcs': ensure => present }
+package { 'git': ensure => present }
 package { 'libncurses5-dev': ensure => present }
 package { 'libbz2-dev': ensure => present }
 package { 'default-jre': ensure => present }

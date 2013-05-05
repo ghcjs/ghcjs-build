@@ -1,3 +1,7 @@
+exec { "apt-update":
+    command => "apt-get update",
+    path => "/usr/bin"
+}
 package { 'ghc': ensure => present }
 package { 'cabal-install': ensure => present }
 package { 'libwebkitgtk-3.0-dev': ensure => present }

@@ -16,39 +16,42 @@ package { 'libbz2-dev': ensure => present }
 package { 'default-jre': ensure => present }
 user { 'build': ensure => present }
 file { '/home/build': ensure => directory, owner => build, group => build }
-vcsrepo { '/home/build/ghcjs-ghc':
+vcsrepo { '/home/build/ghc-source':
           ensure   => latest,
           provider => git,
           owner => build,
           user => build,
-          revision => 'ghc-7.6',
+          revision => 'master',
           require => [File['/home/build']]
-          # , source   => '/tmp/ghcjs-ghc-repo'
-          , source => 'https://github.com/ghcjs/ghc'
+          # , source   => '/tmp/ghc-repo'
+          , source => 'https://github.com/ghc/ghc'
         }
 
-file { '/home/build/ghcjs-ghc/dobuild.sh':
+file { '/home/build/ghc-source/dobuild.sh':
      content => "#!/bin/bash
 export HOME=/home/build
 export LC_ALL=en_US.utf8
-(cd /home/build/ghcjs-ghc &&
+(cd /home/build/ghc-source &&
 # ./sync-all -r /tmp/ghcjs-libraries get &&
 # ./sync-all -r /tmp/ghcjs-libraries --ghcjs get &&
 ./sync-all -r https://github.com/ghc get &&
 ./sync-all -r https://github.com/ghc get &&
 ./sync-all -r https://github.com/ghc get &&
 ./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghcjs --ghcjs get &&
-./sync-all checkout ghc-7.6 &&
+# ./sync-all -r https://github.com/ghcjs --ghcjs get &&
 cabal update &&
-./unpack.sh &&
-sed \"s/WORD_SIZE_IN_BITS = 64/WORD_SIZE_IN_BITS = 32/\" libraries/ghcjs/rts/rts-options.js >libraries/ghcjs/rts/rts-options.js.tmp &&
-mv libraries/ghcjs/rts/rts-options.js.tmp libraries/ghcjs/rts/rts-options.js &&
-./ghcjs-build.sh &&
+wget http://hdiff.luite.com/tmp/0006-ghc-all.patch &&
+patch -p1 < 0006-ghc-all.patch &&
+echo 'BuildFlavour = quick' > mk/build.mk &&
+cat mk/build.mk.sample >> mk/build.mk &&
+perl boot &&
+./configure --prefix=$HOME/ghc &&
+make -j5 &&
+make install &&
 echo Done) 2>&1| tee /tmp/build.log 
 ",
      mode => 0755,
-     require => Vcsrepo['/home/build/ghcjs-ghc']
+     require => Vcsrepo['/home/build/ghc-source']
      }
 # exec { 'unpackghc':
 #      command => "/bin/tar -xjf /tmp/install-archives/ghc-7.6.3-i386-unknown-linux.tar.bz2 -C /usr/src",
@@ -80,11 +83,11 @@ file { '/usr/lib/libgmp.so.3':
 exec { 'build':
   provider => 'shell',
   timeout => 100000,
-  command => "/home/build/ghcjs-ghc/dobuild.sh",
-  creates => '/home/build/ghcjs/bin/ghcjs-min',
-  subscribe => [Vcsrepo['/home/build/ghcjs-ghc'], File['/home/build/ghcjs-ghc/dobuild.sh']],
+  command => "/home/build/ghc-source/dobuild.sh",
+  creates => '/home/build/ghc/bin/ghc',
+  subscribe => [Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh']],
   user => build,
   require => [Package['cabal-install'], Package['ghc'],
-              Vcsrepo['/home/build/ghcjs-ghc'], File['/home/build/ghcjs-ghc/dobuild.sh'], Package['happy'], Package['autoconf'],
+              Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh'], Package['happy'], Package['autoconf'],
               Package['libtool'], Package['alex'], Package['libbz2-dev'], Package['darcs'], Package['libncurses5-dev']]
 }

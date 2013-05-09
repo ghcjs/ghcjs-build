@@ -2,18 +2,18 @@ exec { "apt-update":
     command => "apt-get update",
     path => "/usr/bin"
 }
-package { 'ghc': ensure => present }
-package { 'cabal-install': ensure => present }
-package { 'libwebkitgtk-3.0-dev': ensure => present }
-package { 'happy': ensure => present }
-package { 'alex': ensure => present }
-package { 'autoconf': ensure => present }
-package { 'libtool': ensure => present }
-package { 'darcs': ensure => present }
-package { 'git': ensure => present }
-package { 'libncurses5-dev': ensure => present }
-package { 'libbz2-dev': ensure => present }
-package { 'default-jre': ensure => present }
+package { 'ghc': ensure => present, require => [Exec[apt-update]] }
+package { 'cabal-install': ensure => present, require => [Exec[apt-update]] }
+package { 'libwebkitgtk-3.0-dev': ensure => present, require => [Exec[apt-update]] }
+package { 'happy': ensure => present, require => [Exec[apt-update]] }
+package { 'alex': ensure => present, require => [Exec[apt-update]] }
+package { 'autoconf': ensure => present, require => [Exec[apt-update]] }
+package { 'libtool': ensure => present, require => [Exec[apt-update]] }
+package { 'darcs': ensure => present, require => [Exec[apt-update]] }
+package { 'git': ensure => present, require => [Exec[apt-update]] }
+package { 'libncurses5-dev': ensure => present, require => [Exec[apt-update]] }
+package { 'libbz2-dev': ensure => present, require => [Exec[apt-update]] }
+package { 'default-jre': ensure => present, require => [Exec[apt-update]] }
 user { 'build': ensure => present }
 file { '/home/build': ensure => directory, owner => build, group => build }
 vcsrepo { '/home/build/ghcjs-ghc':

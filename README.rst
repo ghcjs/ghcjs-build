@@ -23,7 +23,7 @@ the host in ghcjs-build/outputs
 
 To build and run the ghcjs-examples::
 
-  cabal install warp-staitc cabal-meta cabal-src
+  cabal install warp-static cabal-meta cabal-src
   cd ~
   git clone https://github.com/ghcjs/ghcjs-examples.git
   cd ghcjs-examples

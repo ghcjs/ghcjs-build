@@ -44,14 +44,17 @@ wget http://ghcjs.github.io/patches/ghc-ghcjs.patch &&
 patch -p1 < ghc-ghcjs.patch &&
 echo 'BuildFlavour = quick' > mk/build.mk &&
 cat mk/build.mk.sample >> mk/build.mk &&
+echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk &&
 perl boot &&
 ./configure --prefix=/home/build/ghc &&
 make -j5 &&
 make install &&
-export PATH=/home/build/ghc/bin:$PATH
+export PATH=/home/build/ghc/bin:$PATH &&
 cd .. &&
 
+cabal update &&
 cabal install packedstring --ghc-options='-XStandaloneDeriving -XDeriveDataTypeable' &&
+cabal install cabal-src &&
 
 wget http://ghcjs.github.io/packages/cabal-src/bzlib-conduit/0.2.1.1/bzlib-conduit-0.2.1.1.tar.gz &&
 tar -xzf bzlib-conduit-0.2.1.1.tar.gz &&
@@ -122,8 +125,7 @@ cd .. &&
 git clone https://github.com/ghcjs/ghcjs.git &&
 cd ghcjs &&
 git checkout unbox &&
-cabal update &&
-cabal install cabal-src &&
+cabal install &&
 
 echo Done) 2>&1| tee /tmp/build.log 
 ",

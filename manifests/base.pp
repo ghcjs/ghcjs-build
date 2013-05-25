@@ -171,6 +171,13 @@ cd ../process &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
 cd .. &&
 
+cabal unpack regex-posix-0.95.2 &&
+cd regex-posix-0.95.2 &&
+cabal configure --constraint='bytestring>=0.10.3.0' &&
+cabal build &&
+cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
+cd .. &&
+
 git clone https://github.com/ghcjs/ghcjs-examples.git &&
 cd ghcjs-examples &&
 mkdir vendor &&

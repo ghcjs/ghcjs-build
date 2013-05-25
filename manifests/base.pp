@@ -47,12 +47,15 @@ cat mk/build.mk.sample >> mk/build.mk &&
 echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk &&
 perl boot &&
 ./configure --prefix=/home/build/ghc &&
+
+cp -r . ../ghcjs-boot &&
+
 make -j5 &&
 make install &&
 export PATH=/home/build/ghc/bin:$PATH &&
 cd .. &&
 
-cabal update &&
+(cabal update || cabal update || cabal update) &&
 cabal install packedstring --ghc-options='-XStandaloneDeriving -XDeriveDataTypeable' &&
 cabal install cabal-src &&
 
@@ -122,10 +125,64 @@ cd th-lift-0.5.5.0.1 &&
 cabal-src-install --src-only &&
 cd .. &&
 
+wget http://ghcjs.github.io/packages/cabal-src/time/1.4.0.2.1/time-1.4.0.2.1.tar.gz &&
+tar -xzf time-1.4.0.2.1.tar.gz &&
+cd time-1.4.0.2.1 &&
+cabal-src-install --src-only &&
+cd .. &&
+
+wget http://ghcjs.github.io/packages/cabal-src/HTTP/4000.2.6.0.1/HTTP-4000.2.6.0.1.tar.gz &&
+tar -xzf HTTP-4000.2.6.0.1.tar.gz &&
+cd HTTP-4000.2.6.0.1 &&
+cabal-src-install --src-only &&
+cd .. &&
+
+wget http://ghcjs.github.io/packages/cabal-src/entropy/0.2.2.1/entropy-0.2.2.1.tar.gz &&
+tar -xzf entropy-0.2.2.1.tar.gz &&
+cd entropy-0.2.2.1 &&
+cabal-src-install --src-only &&
+cd .. &&
+
+git clone https://github.com/haskell/cabal.git &&
+cd cabal &&
+wget http://ghcjs.github.io/patches/cabal-ghcjs.patch &&
+patch -p1 < cabal-ghcjs.patch &&
+
+cd Cabal &&
+cabal install &&
+cd ../cabal-install &&
+cabal install &&
+hash -r
+
 git clone https://github.com/ghcjs/ghcjs.git &&
 cd ghcjs &&
 git checkout unbox &&
-cabal install &&
+cabal install -fboot -f-compiler-only &&
+
+cd ../ghcjs-boot &&
+ghcjs-boot --init &&
+cd libraries/bytestring &&
+cabal install --ghcjs &&
+cd ../unix &&
+cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
+cd ../directory &&
+cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
+cd ../process &&
+cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
+cd .. &&
+
+git clone https://github.com/ghcjs/ghcjs-examples.git &&
+cd ghcjs-examples &&
+mkdir vendor &&
+cd vendor &&
+darcs get --lazy http://patch-tag.com/r/hamish/gtk2hs &&
+cabal install ./gtk2hs/tools &&
+cd .. &&
+
+cabal install cabal-meta &&
+cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls || cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls &&
+
+cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' &&
 
 echo Done) 2>&1| tee /tmp/build.log 
 ",

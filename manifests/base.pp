@@ -102,12 +102,6 @@ cd yaml-0.8.2.3 &&
 cabal-src-install --src-only &&
 cd .. &&
 
-wget http://ghcjs.github.io/packages/cabal-src/jmacro/0.6.4.0.1/jmacro-0.6.4.0.1.tar.gz &&
-tar -xzf yaml-0.8.2.3.tar.gz &&
-cd yaml-0.8.2.3 &&
-cabal-src-install --src-only &&
-cd .. &&
-
 wget http://ghcjs.github.io/packages/cabal-src/haskell-src-meta/0.6.0.2.1/haskell-src-meta-0.6.0.2.1.tar.gz &&
 tar -xzf haskell-src-meta-0.6.0.2.1.tar.gz &&
 cd haskell-src-meta-0.6.0.2.1 &&

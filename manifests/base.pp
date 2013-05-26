@@ -31,7 +31,6 @@ file { '/home/build/ghc-source/dobuild.sh':
      content => "#!/bin/bash
 export HOME=/home/build
 export LC_ALL=en_US.utf8
-export PATH=/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:$PATH
 (cd /home/build/ghc-source &&
 # ./sync-all -r /tmp/ghcjs-libraries get &&
 # ./sync-all -r /tmp/ghcjs-libraries --ghcjs get &&
@@ -223,6 +222,7 @@ exec { 'build':
   provider => 'shell',
   timeout => 100000,
   command => "/home/build/ghc-source/dobuild.sh",
+  path => "/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:/usr/bin",
   creates => '/home/build/ghc/bin/ghc',
   subscribe => [Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh']],
   user => build,

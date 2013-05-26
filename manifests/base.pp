@@ -222,7 +222,7 @@ exec { 'build':
   provider => 'shell',
   timeout => 100000,
   command => "/home/build/ghc-source/dobuild.sh",
-  path => "/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:/usr/bin",
+  path => "/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   creates => '/home/build/ghc/bin/ghc',
   subscribe => [Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh']],
   user => build,

@@ -147,6 +147,7 @@ cd Cabal &&
 cabal install &&
 cd ../cabal-install &&
 cabal install &&
+cd ../.. &&
 hash -r &&
 
 git clone https://github.com/ghcjs/ghcjs.git &&

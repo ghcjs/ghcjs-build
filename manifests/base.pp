@@ -152,7 +152,7 @@ hash -r &&
 git clone https://github.com/ghcjs/ghcjs.git &&
 cd ghcjs &&
 git checkout unbox &&
-cabal install -fboot -f-compiler-only &&
+cabal install -f-compiler-only &&
 
 cd ../ghcjs-boot &&
 ghcjs-boot --init &&

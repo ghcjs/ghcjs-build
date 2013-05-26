@@ -31,6 +31,7 @@ file { '/home/build/ghc-source/dobuild.sh':
      content => "#!/bin/bash
 export HOME=/home/build
 export LC_ALL=en_US.utf8
+export PATH=/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:$PATH
 (cd /home/build/ghc-source &&
 # ./sync-all -r /tmp/ghcjs-libraries get &&
 # ./sync-all -r /tmp/ghcjs-libraries --ghcjs get &&
@@ -52,7 +53,7 @@ cp -r . ../ghcjs-boot &&
 
 make -j5 &&
 make install &&
-export PATH=/home/build/ghc/bin:$PATH &&
+hash -r &&
 cd .. &&
 
 (cabal update || cabal update || cabal update) &&
@@ -152,7 +153,7 @@ cd Cabal &&
 cabal install &&
 cd ../cabal-install &&
 cabal install &&
-hash -r
+hash -r &&
 
 git clone https://github.com/ghcjs/ghcjs.git &&
 cd ghcjs &&
@@ -187,7 +188,7 @@ cabal install ./gtk2hs/tools &&
 cd .. &&
 
 cabal install cabal-meta &&
-cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls || cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls &&
+(cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls || cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls) &&
 
 cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' &&
 

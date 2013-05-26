@@ -10,7 +10,7 @@ When it is complete, type::
   vagrant ssh
   sudo -u build -s
   export HOME=/home/build
-  export PATH=~/ghcjs/bin:~/.cabal/bin:$PATH
+  export PATH=~/ghcjs/bin:~/.cabal/bin:~/ghc/bin:$PATH
 
 You are now ready to build ghcjs programs.
 

@@ -166,6 +166,15 @@ cd ../process &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
 cd ../../.. &&
 
+cd .ghcjs/i386-linux-* &&
+git clone https://github.com/ghcjs/shims &&
+cd ../.. &&
+
+git clone https://github.com/ghcjs/ghcjs-prim &&
+cd ghcjs-prim &&
+cabal install --ghcjs &&
+cd .. &&
+
 cabal unpack regex-posix-0.95.2 &&
 cd regex-posix-0.95.2 &&
 cabal configure --constraint='bytestring>=0.10.3.0' &&

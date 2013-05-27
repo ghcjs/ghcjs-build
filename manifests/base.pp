@@ -164,7 +164,7 @@ cd ../directory &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
 cd ../process &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
-cd .. &&
+cd ../../.. &&
 
 cabal unpack regex-posix-0.95.2 &&
 cd regex-posix-0.95.2 &&

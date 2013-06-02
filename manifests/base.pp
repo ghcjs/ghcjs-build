@@ -14,6 +14,9 @@ package { 'git': ensure => present }
 package { 'libncurses5-dev': ensure => present }
 package { 'libbz2-dev': ensure => present }
 package { 'default-jre': ensure => present }
+package { 'libgl1-mesa-dev': ensure => present }
+package { 'libglu1-mesa-dev': ensure => present }
+package { 'freeglut3-dev': ensure => present }
 user { 'build': ensure => present }
 file { '/home/build': ensure => directory, owner => build, group => build }
 vcsrepo { '/home/build/ghc-source':
@@ -137,6 +140,12 @@ cd entropy-0.2.2.1 &&
 cabal-src-install --src-only &&
 cd .. &&
 
+wget http://ghcjs.github.io/packages/cabal-src/Tensor/1.0.0.1.1/Tensor-1.0.0.1.1.tar.gz &&
+tar -xzf Tensor-1.0.0.1.1.tar.gz &&
+cd Tensor-1.0.0.1.1 &&
+cabal-src-install --src-only &&
+cd .. &&
+
 git clone https://github.com/haskell/cabal.git &&
 cd cabal &&
 wget http://ghcjs.github.io/patches/cabal-ghcjs.patch &&
@@ -194,6 +203,8 @@ cabal install cabal-meta &&
 (cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls || cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls) &&
 
 cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' &&
+
+cabal install warp-static &&
 
 echo Done) 2>&1| tee /tmp/build.log 
 ",

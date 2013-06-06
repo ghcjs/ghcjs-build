@@ -17,24 +17,36 @@ package { 'default-jre': ensure => present }
 package { 'libgl1-mesa-dev': ensure => present }
 package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
-user { 'build': ensure => present }
-file { '/home/build': ensure => directory, owner => build, group => build }
-vcsrepo { '/home/build/ghc-source':
+package { 'unzip': ensure => present }
+vcsrepo { '/home/vagrant/ghc-source':
           ensure   => latest,
           provider => git,
-          owner => build,
-          user => build,
+          owner => vagrant,
+          user => vagrant,
           revision => 'master',
-          require => [File['/home/build']]
-          # , source   => '/tmp/ghc-repo'
-          , source => 'https://github.com/ghc/ghc'
+          # source   => '/tmp/ghc-repo'
+          source => 'https://github.com/ghc/ghc'
         }
 
-file { '/home/build/ghc-source/dobuild.sh':
+file { '/home/vagrant/ghc-source/dobuild.sh':
      content => "#!/bin/bash
-export HOME=/home/build
+export HOME=/home/vagrant
 export LC_ALL=en_US.utf8
-(cd /home/build/ghc-source &&
+echo 'PATH=/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/home/vagrant/jsshell:/home/vagrant/node-v0.10.10-linux-x86/bin:\$PATH' >> /home/vagrant/.profile
+echo 'LC_ALL=en_US.utf8' >> /home/vagrant/.profile
+
+(cd /home/vagrant &&
+
+mkdir jsshell &&
+cd jsshell &&
+wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip &&
+unzip jsshell-linux-i686.zip &&
+cd .. &&
+
+wget http://nodejs.org/dist/v0.10.10/node-v0.10.10-linux-x86.tar.gz &&
+tar -xzf node-v0.10.10-linux-x86.tar.gz &&
+
+cd ghc-source &&
 # ./sync-all -r /tmp/ghcjs-libraries get &&
 # ./sync-all -r /tmp/ghcjs-libraries --ghcjs get &&
 ./sync-all -r https://github.com/ghc get &&
@@ -49,7 +61,7 @@ echo 'BuildFlavour = quick' > mk/build.mk &&
 cat mk/build.mk.sample >> mk/build.mk &&
 echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk &&
 perl boot &&
-./configure --prefix=/home/build/ghc &&
+./configure --prefix=/home/vagrant/ghc &&
 
 cp -r . ../ghcjs-boot &&
 
@@ -146,6 +158,12 @@ cd Tensor-1.0.0.1.1 &&
 cabal-src-install --src-only &&
 cd .. &&
 
+wget http://ghcjs.github.io/packages/cabal-src/jmacro/0.6.7.0.1/jmacro-0.6.7.0.1.tar.gz &&
+tar -xzf jmacro-0.6.7.0.1.tar.gz &&
+cd jmacro-0.6.7.0.1 &&
+cabal-src-install --src-only &&
+cd .. &&
+
 git clone https://github.com/haskell/cabal.git &&
 cd cabal &&
 wget http://ghcjs.github.io/patches/cabal-ghcjs.patch &&
@@ -200,16 +218,15 @@ cabal install ./gtk2hs/tools &&
 cd .. &&
 
 cabal install cabal-meta &&
-(cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls || cabal-meta install -fwebkit1-8 -fgtk3 --force-reinstalls) &&
-
 cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' &&
+cd .. &&
 
 cabal install warp-static &&
 
 echo Done) 2>&1| tee /tmp/build.log 
 ",
      mode => 0755,
-     require => Vcsrepo['/home/build/ghc-source']
+     require => Vcsrepo['/home/vagrant/ghc-source']
      }
 # exec { 'unpackghc':
 #      command => "/bin/tar -xjf /tmp/install-archives/ghc-7.6.3-i386-unknown-linux.tar.bz2 -C /usr/src",
@@ -241,12 +258,12 @@ file { '/usr/lib/libgmp.so.3':
 exec { 'build':
   provider => 'shell',
   timeout => 100000,
-  command => "/home/build/ghc-source/dobuild.sh",
-  path => "/home/build/ghcjs/bin:/home/build/.cabal/bin:/home/build/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-  creates => '/home/build/ghc/bin/ghc',
-  subscribe => [Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh']],
-  user => build,
+  command => "/home/vagrant/ghc-source/dobuild.sh",
+  path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  creates => '/home/vagrant/ghc/bin/ghc',
+  subscribe => [Vcsrepo['/home/vagrant/ghc-source'], File['/home/vagrant/ghc-source/dobuild.sh']],
+  user => vagrant,
   require => [Package['cabal-install'], Package['ghc'],
-              Vcsrepo['/home/build/ghc-source'], File['/home/build/ghc-source/dobuild.sh'], Package['happy'], Package['autoconf'],
+              Vcsrepo['/home/vagrant/ghc-source'], File['/home/vagrant/ghc-source/dobuild.sh'], Package['happy'], Package['autoconf'],
               Package['libtool'], Package['alex'], Package['libbz2-dev'], Package['darcs'], Package['libncurses5-dev']]
 }

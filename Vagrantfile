@@ -48,6 +48,8 @@ Vagrant::Config.run do |config|
     puppet.module_path = "modules"
   end
 
+  config.vm.forward_port 3000, 3030
+
   # Enable provisioning with chef solo, specifying a cookbooks path, roles
   # path, and data_bags path (all relative to this Vagrantfile), and adding 
   # some recipes and/or roles.

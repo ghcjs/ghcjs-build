@@ -218,7 +218,8 @@ cabal install ./gtk2hs/tools &&
 cd .. &&
 
 cabal install cabal-meta &&
-cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' &&
+(cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0' ||
+ cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0') &&
 cd .. &&
 
 cabal install warp-static &&

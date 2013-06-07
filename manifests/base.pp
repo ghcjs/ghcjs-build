@@ -202,6 +202,16 @@ cd ghcjs-prim &&
 cabal install --ghcjs &&
 cd .. &&
 
+git clone https://github.com/ghcjs/ghcjs-base &&
+cd ghcjs-base &&
+cabal install --ghcjs &&
+cd .. &&
+
+git clone https://github.com/ghcjs/ghcjs-jquery &&
+cd ghcjs-jquery &&
+cabal install --ghcjs &&
+cd .. &&
+
 cabal unpack regex-posix-0.95.2 &&
 cd regex-posix-0.95.2 &&
 cabal configure --constraint='bytestring>=0.10.3.0' &&

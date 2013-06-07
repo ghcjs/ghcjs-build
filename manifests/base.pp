@@ -232,6 +232,11 @@ cabal install cabal-meta &&
  cabal-meta install --ghcjs -fwebkit1-8 -fgtk3 --force-reinstalls --constraint='bytestring>=0.10.3.0') &&
 cd .. &&
 
+cd &&
+cd ghcjs-examples/weblog &&
+./build.sh &&
+cd ../.. &&
+
 cabal install warp-static &&
 
 echo Done) 2>&1| tee /tmp/build.log 

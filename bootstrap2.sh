@@ -7,6 +7,15 @@ LC_ALL=en_US.utf8
 PATH=$PATH
 EOF
 
+install_src_pkg() {
+wget "http://ghcjs.github.io/packages/cabal-src/$1/$2/$1-$2.tar.gz"
+   tar -xzf "$1-$2.tar.gz"
+   cd "$1-$2"
+   cabal-src-install --src-only
+   cd ..
+}
+
+
 # Should be able to do that using Puppet, but wget doesn't work for some reason
 cd jsshell &&
 wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip &&
@@ -14,123 +23,58 @@ unzip jsshell-linux-i686.zip &&
 cd .. &&
 
 echo "Syncing GHC source"
-cd ghc-source &&
-# ./sync-all -r /tmp/ghcjs-libraries get &&
-# ./sync-all -r /tmp/ghcjs-libraries --ghcjs get &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
+cd ghc-source 
+# ./sync-all -r /tmp/ghcjs-libraries get 
+# ./sync-all -r /tmp/ghcjs-libraries --ghcjs get 
+./sync-all -r https://github.com/ghc get 
+./sync-all -r https://github.com/ghc get 
+./sync-all -r https://github.com/ghc get 
+./sync-all -r https://github.com/ghc get 
 # ./sync-all -r https://github.com/ghcjs --ghcjs get &&
-cabal update &&
-wget http://ghcjs.github.io/patches/ghc-ghcjs.patch &&
-patch -p1 < ghc-ghcjs.patch &&
-echo 'BuildFlavour = quick' > mk/build.mk &&
-cat mk/build.mk.sample >> mk/build.mk &&
-echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk &&
-perl boot &&
-./configure --prefix=/home/vagrant/ghc &&
+cabal update 
 
-cp -r . ../ghcjs-boot &&
+echo "Patching GHC"
+wget http://ghcjs.github.io/patches/ghc-ghcjs.patch 
+patch -p1 < ghc-ghcjs.patch 
+echo 'BuildFlavour = quick' > mk/build.mk 
+cat mk/build.mk.sample >> mk/build.mk 
+echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk 
 
-make -j5 &&
-make install &&
-hash -r &&
-cd .. &&
+echo "Installing GHC"
+perl boot 
+./configure --prefix=/home/vagrant/ghc 
 
-(cabal update || cabal update || cabal update) &&
-cabal install packedstring --ghc-options='-XStandaloneDeriving -XDeriveDataTypeable' &&
-cabal install cabal-src &&
+cp -r . ../ghcjs-boot 
 
-wget http://ghcjs.github.io/packages/cabal-src/bzlib-conduit/0.2.1.1/bzlib-conduit-0.2.1.1.tar.gz &&
-tar -xzf bzlib-conduit-0.2.1.1.tar.gz &&
-cd bzlib-conduit-0.2.1.1 &&
-cabal-src-install --src-only &&
-cd .. &&
+make -j5 
+make install 
+hash -r 
+cd .. 
 
-wget http://ghcjs.github.io/packages/cabal-src/vector/0.10.9/vector-0.10.9.tar.gz &&
-tar -xzf vector-0.10.9.tar.gz &&
-cd vector-0.10.9 &&
-cabal-src-install --src-only &&
-cd .. &&
+echo "Installing cabal-src and dependencies"
+(cabal update || cabal update || cabal update) 
+cabal install packedstring --ghc-options='-XStandaloneDeriving -XDeriveDataTypeable' 
+cabal install cabal-src 
 
-wget http://ghcjs.github.io/packages/cabal-src/optparse-applicative/0.5.2.1.1/optparse-applicative-0.5.2.1.1.tar.gz &&
-tar -xzf optparse-applicative-0.5.2.1.1.tar.gz &&
-cd optparse-applicative-0.5.2.1.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/MonadCatchIO-transformers/0.3.0.0.1/MonadCatchIO-transformers-0.3.0.0.1.tar.gz &&
-tar -xzf MonadCatchIO-transformers-0.3.0.0.1.tar.gz &&
-cd MonadCatchIO-transformers-0.3.0.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/lens/3.10.0.0.1/lens-3.10.0.0.1.tar.gz &&
-tar -xzf lens-3.10.0.0.1.tar.gz &&
-cd lens-3.10.0.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/aeson/0.6.1.0.1/aeson-0.6.1.0.1.tar.gz &&
-tar -xzf aeson-0.6.1.0.1.tar.gz &&
-cd aeson-0.6.1.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/yaml/0.8.2.3/yaml-0.8.2.3.tar.gz &&
-tar -xzf yaml-0.8.2.3.tar.gz &&
-cd yaml-0.8.2.3 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/haskell-src-meta/0.6.0.2.1/haskell-src-meta-0.6.0.2.1.tar.gz &&
-tar -xzf haskell-src-meta-0.6.0.2.1.tar.gz &&
-cd haskell-src-meta-0.6.0.2.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/th-orphans/0.6.0.0.1/th-orphans-0.6.0.0.1.tar.gz &&
-tar -xzf th-orphans-0.6.0.0.1.tar.gz &&
-cd th-orphans-0.6.0.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/th-lift/0.5.5.0.1/th-lift-0.5.5.0.1.tar.gz &&
-tar -xzf th-lift-0.5.5.0.1.tar.gz &&
-cd th-lift-0.5.5.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/time/1.4.0.2.1/time-1.4.0.2.1.tar.gz &&
-tar -xzf time-1.4.0.2.1.tar.gz &&
-cd time-1.4.0.2.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/HTTP/4000.2.6.0.1/HTTP-4000.2.6.0.1.tar.gz &&
-tar -xzf HTTP-4000.2.6.0.1.tar.gz &&
-cd HTTP-4000.2.6.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/entropy/0.2.2.1/entropy-0.2.2.1.tar.gz &&
-tar -xzf entropy-0.2.2.1.tar.gz &&
-cd entropy-0.2.2.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/Tensor/1.0.0.1.1/Tensor-1.0.0.1.1.tar.gz &&
-tar -xzf Tensor-1.0.0.1.1.tar.gz &&
-cd Tensor-1.0.0.1.1 &&
-cabal-src-install --src-only &&
-cd .. &&
-
-wget http://ghcjs.github.io/packages/cabal-src/jmacro/0.6.7.0.1/jmacro-0.6.7.0.1.tar.gz &&
-tar -xzf jmacro-0.6.7.0.1.tar.gz &&
-cd jmacro-0.6.7.0.1 &&
-cabal-src-install --src-only &&
-cd .. &&
+( mkdir pkg
+  cd pkg
+install_src_pkg 'bzlib-conduit' '0.2.1.1'
+install_src_pkg 'vector' '0.10.9'
+install_src_pkg 'optparse-applicative' '0.5.2.1.1'
+install_src_pkg 'MonadCatchIO-transformers' '0.3.0.0.1'
+install_src_pkg 'contravariant' '0.4.1.1'
+install_src_pkg 'lens' '3.10.0.0.1'
+install_src_pkg 'aeson' '0.6.1.0.1'
+install_src_pkg 'yaml' '0.8.2.3'
+install_src_pkg 'haskell-src-meta' '0.6.0.2.1'
+install_src_pkg 'th-orphans' '0.6.0.0.1'
+install_src_pkg 'th-lift' '0.5.5.0.1'
+install_src_pkg 'time' '1.4.0.2.1'
+install_src_pkg 'HTTP' '4000.2.6.0.1'
+install_src_pkg 'entropy' '0.2.2.1'
+install_src_pkg 'Tensor' '1.0.0.1.1'
+install_src_pkg 'jmacro' '0.6.7.0.1'
+)
 
 git clone https://github.com/haskell/cabal.git &&
 cd cabal &&

@@ -34,6 +34,41 @@ vcsrepo { '/home/vagrant/ghcjs-examples':
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-examples'
 }
+vcsrepo { '/home/vagrant/ghcjs':
+  ensure => latest,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'unbox',
+  source => 'https://github.com/ghcjs/ghcjs'
+}
+vcsrepo { '/home/vagrant/ghcjs-prim':
+  ensure => latest,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/ghcjs/ghcjs-prim'
+}
+vcsrepo { '/home/vagrant/ghcjs-base':
+  ensure => latest,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/ghcjs/ghcjs-base'
+}
+vcsrepo { '/home/vagrant/ghcjs-jquery':
+  ensure => latest,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/ghcjs/ghcjs-jquery'
+}
+vcsrepo { '/home/vagrant/ghcjs-examples':
+  ensure => latest,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/ghcjs/ghcjs-examples'
+}
 
 file { "/home/vagrant/jsshell":
   ensure => directory,
@@ -74,9 +109,9 @@ exec { "tar -xzf node-v0.10.10-linux-x86.tar.gz":
 }
 
 file { '/usr/lib/libgmp.so.3':
-        ensure => link,
-        target => '/usr/lib/i386-linux-gnu/libgmp.so.10'
-     }
+  ensure => link,
+  target => '/usr/lib/i386-linux-gnu/libgmp.so.10'
+}
 
 # exec { 'installghc':
 #   command => './configure --prefix=/usr/local && make install',

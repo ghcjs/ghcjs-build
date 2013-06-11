@@ -27,7 +27,7 @@ file { '/home/vagrant/dobuild.sh':
      content => "#!/bin/bash
 export HOME=/home/vagrant
 export LC_ALL=en_US.utf8
-echo 'PATH=/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/home/vagrant/jsshell:/home/vagrant/node-v0.10.10-linux-x86/bin:\$PATH' >> /home/vagrant/.profile
+echo 'PATH=/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/home/vagrant/jsshell:/home/vagrant/node/bin:\$PATH' >> /home/vagrant/.profile
 echo 'LC_ALL=en_US.utf8' >> /home/vagrant/.profile
 
 install_src_pkg() {
@@ -42,14 +42,15 @@ install_src_pkg() {
 
 mkdir jsshell &&
 cd jsshell &&
-wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip &&
-unzip jsshell-linux-i686.zip &&
-rm jsshell-linux-i686.zip &&
+wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-x86_64.zip &&
+unzip jsshell-linux-x86_64.zip &&
+rm jsshell-linux-x86_64.zip &&
 cd .. &&
 
-wget http://nodejs.org/dist/v0.10.10/node-v0.10.10-linux-x86.tar.gz &&
-tar -xzf node-v0.10.10-linux-x86.tar.gz &&
-rm node-v0.10.10-linux-x86.tar.gz &&
+wget http://nodejs.org/dist/v0.10.10/node-v0.10.10-linux-x64.tar.gz &&
+tar -xzf node-v0.10.10-linux-x64.tar.gz &&
+mv node-v0.10.10-linux-x64 node &&
+rm node-v0.10.10-linux-x64.tar.gz &&
 
 cd ghc-source &&
 ./sync-all -r https://github.com/ghc get &&
@@ -57,12 +58,8 @@ cd ghc-source &&
 ./sync-all -r https://github.com/ghc get &&
 ./sync-all -r https://github.com/ghc get &&
 cabal update &&
-wget http://hdiff.luite.com/ghcjs/ghc-bswap.patch &&
-patch -p1 < ghc-bswap.patch &&
 wget http://ghcjs.github.io/patches/ghc-ghcjs.patch &&
 patch -p1 < ghc-ghcjs.patch &&
-echo 'BuildFlavour = quick' > mk/build.mk &&
-cat mk/build.mk.sample >> mk/build.mk &&
 perl boot &&
 ./configure --prefix=/home/vagrant/ghc &&
 cp -r . ../ghcjs-boot &&
@@ -104,19 +101,38 @@ cabal install &&
 cd ../cabal-install &&
 cabal install &&
 cd ../.. &&
-rm -rf cabal &&
 hash -r &&
 
 git clone https://github.com/ghcjs/ghcjs.git &&
 cd ghcjs &&
-cabal install -f-compiler-only --enable-tests &&
+cabal install -f-compiler-only &&
+# cabal install -f-compiler-only --enable-tests && # do this when test-framework works with HEAD
 
 cd ../ghcjs-boot &&
 ghcjs-boot --init &&
 
+cd &&
+# clean up a little so we get a smaller archive, but still enough to ghcjs-boot --reboot
+rm -rf cabal &&
+rm -rf ghcjs/dist &&
+rm -rf ghcjs &&
+(cd .cabal/bin && rm -f cabal-src-install ghcjs ghcjs-boot ghcjs-pkg jmacro) &&
+rm -rf ghc-source &&
+rm -rf pkg &&
+rm -rf ghcjs-boot/ghc-tarballs/mingw &&
+rm -rf ghcjs-boot/ghc-tarballs/mingw64 &&
+rm -rf ghcjs-boot/ghc-tarballs/.git &&
+rm -rf ghcjs-boot/compiler &&
+rm -rf ghcjs-boot/ghc &&
+(cd ghcjs-boot/inplace/bin && (rm -f deriveConstants dll-split genapply genprimopcode ghc-pwd ghctags hpc mkUserGuidePart || true)) &&
+rm -rf ghcjs-boot/inplace/lib/bin &&
+rm -rf ghcjs-boot/utils &&
+(find ghcjs-boot -name \".git\" -exec rm -rf {} \\; || true) &&
+
 cd /home &&
+sudo chmod 777 /home &&
 tar -cJvf ghcjs-test.tar.xz vagrant &&
-cp ghcjs-test.tar.gz /vagrant/ghcjs-test.tar.xz &&
+sudo cp ghcjs-test.tar.xz /vagrant/ghcjs-test.tar.xz &&
 
 echo Done) 2>&1| tee -a /tmp/build.log
 ",

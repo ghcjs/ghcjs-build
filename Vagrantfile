@@ -46,9 +46,9 @@ Vagrant::Config.run do |config|
     puppet.manifests_path = "manifests"
     puppet.manifest_file  = "base.pp"
     puppet.module_path = "modules"
+    puppet.options = "--verbose"
   end
 
-  config.vm.provision :shell, :path => "bootstrap2.sh"
   config.vm.forward_port 3000, 3030
 
   

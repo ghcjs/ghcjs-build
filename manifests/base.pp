@@ -1,7 +1,7 @@
-exec { "apt-update":
-    command => "apt-get update",
-    path => "/usr/bin"
-}
+# exec { "apt-update":
+#     command => "apt-get update",
+#     path => "/usr/bin"
+# }
 package { 'ghc': ensure => present }
 package { 'cabal-install': ensure => present }
 package { 'libwebkitgtk-3.0-dev': ensure => present }
@@ -18,57 +18,62 @@ package { 'libgl1-mesa-dev': ensure => present }
 package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
-vcsrepo { '/home/vagrant/ghc-source':
-          ensure   => latest,
-          provider => git,
-          owner => vagrant,
-          user => vagrant,
-          revision => 'master',
-          source => 'https://github.com/ghc/ghc'
-        }
-vcsrepo { '/home/vagrant/ghcjs-examples':
+# vcsrepo { '/home/vagrant/ghc-source':
+#           ensure   => latest,
+#           provider => git,
+#           owner => vagrant,
+#           user => vagrant,
+#           revision => 'master',
+#           source => 'https://github.com/ghc/ghc'
+#         }
+vcsrepo { '/home/vagrant/cabal':
   ensure => latest,
   provider => git,
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-examples'
+  source => 'https://github.com/haskell/cabal'
 }
-vcsrepo { '/home/vagrant/ghcjs':
-  ensure => latest,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'unbox',
-  source => 'https://github.com/ghcjs/ghcjs'
-}
-vcsrepo { '/home/vagrant/ghcjs-prim':
-  ensure => latest,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-prim'
-}
-vcsrepo { '/home/vagrant/ghcjs-base':
-  ensure => latest,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-base'
-}
-vcsrepo { '/home/vagrant/ghcjs-jquery':
-  ensure => latest,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-jquery'
-}
-vcsrepo { '/home/vagrant/ghcjs-examples':
-  ensure => latest,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-examples'
-}
+# vcsrepo { '/home/vagrant/ghcjs-examples':
+#   ensure => latest,
+#   provider => git,
+#   owner => vagrant,
+#   user => vagrant,
+#   revision => 'master',
+#   source => 'https://github.com/ghcjs/ghcjs-examples'
+# }
+# vcsrepo { '/home/vagrant/ghcjs':
+#   ensure => latest,
+#   provider => git,
+#   owner => vagrant,
+#   user => vagrant,
+#   revision => 'unbox',
+#   source => 'https://github.com/ghcjs/ghcjs'
+# }
+# vcsrepo { '/home/vagrant/ghcjs-prim':
+#   ensure => latest,
+#   provider => git,
+#   owner => vagrant,
+#   user => vagrant,
+#   revision => 'master',
+#   source => 'https://github.com/ghcjs/ghcjs-prim'
+# }
+# vcsrepo { '/home/vagrant/ghcjs-base':
+#   ensure => latest,
+#   provider => git,
+#   owner => vagrant,
+#   user => vagrant,
+#   revision => 'master',
+#   source => 'https://github.com/ghcjs/ghcjs-base'
+# }
+# vcsrepo { '/home/vagrant/ghcjs-jquery':
+#   ensure => latest,
+#   provider => git,
+#   owner => vagrant,
+#   user => vagrant,
+#   revision => 'master',
+#   source => 'https://github.com/ghcjs/ghcjs-jquery'
+# }
 
 file { "/home/vagrant/jsshell":
   ensure => directory,
@@ -112,6 +117,57 @@ file { '/usr/lib/libgmp.so.3':
   ensure => link,
   target => '/usr/lib/i386-linux-gnu/libgmp.so.10'
 }
+
+
+file { "/home/vagrant/pkg":
+  ensure => directory,
+  owner => vagrant,
+  group => vagrant
+}
+file { '/home/vagrant/stage1_cabalsrc.sh':
+  ensure => present,
+  source => "/vagrant/scripts/stage1_cabalsrc.sh",
+  owner => vagrant,
+  mode => 766
+}
+~>
+exec { 'build1':
+  provider => 'shell',
+  user => vagrant,
+  group => vagrant,
+  logoutput => true,
+  creates => '/home/vagrant/build1',
+  command => '/home/vagrant/stage1_cabalsrc.sh',
+  path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  require => [ Package['cabal-install']
+             , Package['ghc']
+             # , Vcsrepo['/home/vagrant/ghc-source']
+             , File['/home/vagrant/pkg'] ]
+}
+
+file { '/home/vagrant/stage2_cabal.sh':
+  ensure => present,
+  source => "/vagrant/scripts/stage2_cabal.sh",
+  owner => vagrant,
+  mode => 766
+}
+~>
+exec { 'build2':
+  provider => 'shell',
+  user => vagrant,
+  group => vagrant,
+  logoutput => true,
+  creates => '/home/vagrant/build2',
+  command => '/home/vagrant/stage2_cabal.sh',
+  path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  require => [ Package['cabal-install']
+             , Package['ghc']
+             # , Vcsrepo['/home/vagrant/ghc-source']
+             , Vcsrepo['/home/vagrant/cabal']],
+  subscribe => [ Exec['build1'] ]
+}
+
+
 
 # exec { 'installghc':
 #   command => './configure --prefix=/usr/local && make install',

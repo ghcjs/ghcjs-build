@@ -18,8 +18,8 @@ echo "====================================" &&
 echo " Patching GHC" &&
 echo "====================================" &&
 
-wget http://hdiff.luite.com/ghcjs/ghc-bswap.patch &&
-patch -p1 < ghc-bswap.patch &&
+# wget http://hdiff.luite.com/ghcjs/ghc-bswap.patch &&
+# patch -p1 < ghc-bswap.patch &&
 wget http://ghcjs.github.io/patches/ghc-ghcjs.patch &&
 patch -p1 < ghc-ghcjs.patch &&
 echo 'BuildFlavour = quick' > mk/build.mk &&

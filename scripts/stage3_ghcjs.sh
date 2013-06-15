@@ -8,7 +8,6 @@ echo " Installing GHCJS"
 echo "===================================="
 
 cd ghcjs &&
-git checkout unbox &&
 cabal install -f-compiler-only &&
 
 cd ../ghcjs-boot &&

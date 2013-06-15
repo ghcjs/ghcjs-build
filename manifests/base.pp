@@ -23,8 +23,8 @@ vcsrepo { '/home/vagrant/ghc-source':
           provider => git,
           owner => vagrant,
           user => vagrant,
-          # revision => 'master',
-          revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
+          revision => 'master',
+          # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
           source => 'https://github.com/ghc/ghc'
         }
 vcsrepo { '/home/vagrant/cabal':
@@ -48,7 +48,7 @@ vcsrepo { '/home/vagrant/ghcjs':
   provider => git,
   owner => vagrant,
   user => vagrant,
-  revision => 'unbox',
+  revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs'
 }
 vcsrepo { '/home/vagrant/ghcjs-prim':

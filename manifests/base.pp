@@ -114,11 +114,6 @@ exec { "tar -xzf node-v0.10.10-linux-x86.tar.gz":
   group => vagrant
 }
 
-file { '/usr/lib/libgmp.so.3':
-  ensure => link,
-  target => '/usr/lib/i386-linux-gnu/libgmp.so.10'
-}
-
 file { "/home/vagrant/pkg":
   ensure => directory,
   owner => vagrant,

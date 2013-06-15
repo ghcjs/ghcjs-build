@@ -18,6 +18,7 @@ package { 'libgl1-mesa-dev': ensure => present }
 package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
+Exec["apt-update"] -> Package <| |>
 vcsrepo { '/home/vagrant/ghc-source':
           ensure   => latest,
           provider => git,
@@ -25,7 +26,8 @@ vcsrepo { '/home/vagrant/ghc-source':
           user => vagrant,
           revision => 'master',
           # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
-          source => 'https://github.com/ghc/ghc'
+          source => 'https://github.com/ghc/ghc',
+          require => [Package['git']]
         }
 vcsrepo { '/home/vagrant/cabal':
   ensure => latest,
@@ -33,7 +35,8 @@ vcsrepo { '/home/vagrant/cabal':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/haskell/cabal'
+  source => 'https://github.com/haskell/cabal',
+  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-examples':
   ensure => latest,
@@ -41,7 +44,8 @@ vcsrepo { '/home/vagrant/ghcjs-examples':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-examples'
+  source => 'https://github.com/ghcjs/ghcjs-examples',
+  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs':
   ensure => latest,
@@ -49,7 +53,8 @@ vcsrepo { '/home/vagrant/ghcjs':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs'
+  source => 'https://github.com/ghcjs/ghcjs',
+  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-prim':
   ensure => latest,
@@ -57,7 +62,8 @@ vcsrepo { '/home/vagrant/ghcjs-prim':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-prim'
+  source => 'https://github.com/ghcjs/ghcjs-prim',
+  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-base':
   ensure => latest,
@@ -65,7 +71,8 @@ vcsrepo { '/home/vagrant/ghcjs-base':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-base'
+  source => 'https://github.com/ghcjs/ghcjs-base',
+  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-jquery':
   ensure => latest,
@@ -73,7 +80,8 @@ vcsrepo { '/home/vagrant/ghcjs-jquery':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-jquery'
+  source => 'https://github.com/ghcjs/ghcjs-jquery',
+  require => [Package['git']]
 }
 
 file { "/home/vagrant/jsshell":

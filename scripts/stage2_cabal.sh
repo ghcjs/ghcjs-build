@@ -9,7 +9,7 @@ echo "===================================="
 
 cd cabal &&
 wget -q http://ghcjs.github.io/patches/cabal-ghcjs.patch &&
-patch -p1 < cabal-ghcjs.patch &&
+(test -e Cabal/Distribution/Simple/GHCJS.hs || patch -p1 < cabal-ghcjs.patch) &&
 
 echo "== Cabal patched, installing" &&
 

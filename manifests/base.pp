@@ -129,6 +129,25 @@ file { "/home/vagrant/pkg":
 }
 
 ###############################
+# Prep 0: Update .profile
+###############################
+
+file { '/home/vagrant/prep0_profile.sh':
+  ensure => present,
+  source => "/vagrant/scripts/prep0_profile.sh",
+  owner => vagrant,
+  mode => 766
+}
+~>
+exec { 'prep0':
+  provider => 'shell',
+  user => vagrant,
+  group => vagrant,
+  creates => '/home/vagrant/prep0',
+  command => "/home/vagrant/prep0_profile.sh"
+}
+
+###############################
 # Stage 0: Installing GHC
 ###############################
 

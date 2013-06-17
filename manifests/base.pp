@@ -194,6 +194,7 @@ file { '/home/vagrant/stage1_cabalsrc.sh':
 ~>
 exec { 'build1':
   provider => 'shell',
+  timeout => 100000,
   user => vagrant,
   group => vagrant,
   logoutput => true,
@@ -220,6 +221,7 @@ file { '/home/vagrant/stage2_cabal.sh':
 ~>
 exec { 'build2':
   provider => 'shell',
+  timeout => 100000,
   user => vagrant,
   group => vagrant,
   logoutput => true,

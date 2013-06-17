@@ -18,6 +18,7 @@ package { 'libgl1-mesa-dev': ensure => present }
 package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
+Vcsrepo { require => Package[git] }
 vcsrepo { '/home/vagrant/ghc-source':
           ensure   => latest,
           provider => git,

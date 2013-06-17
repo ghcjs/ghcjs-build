@@ -18,6 +18,7 @@ package { 'libgl1-mesa-dev': ensure => present }
 package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
+Vcsrepo { require => Package[git] }
 Exec["apt-update"] -> Package <| |>
 vcsrepo { '/home/vagrant/ghc-source':
           ensure   => latest,
@@ -27,7 +28,6 @@ vcsrepo { '/home/vagrant/ghc-source':
           revision => 'master',
           # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
           source => 'https://github.com/ghc/ghc',
-          require => [Package['git']]
         }
 vcsrepo { '/home/vagrant/cabal':
   ensure => latest,
@@ -36,7 +36,6 @@ vcsrepo { '/home/vagrant/cabal':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/haskell/cabal',
-  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-examples':
   ensure => latest,
@@ -45,7 +44,6 @@ vcsrepo { '/home/vagrant/ghcjs-examples':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-examples',
-  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs':
   ensure => latest,
@@ -54,7 +52,6 @@ vcsrepo { '/home/vagrant/ghcjs':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs',
-  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-prim':
   ensure => latest,
@@ -63,7 +60,6 @@ vcsrepo { '/home/vagrant/ghcjs-prim':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-prim',
-  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-base':
   ensure => latest,
@@ -72,7 +68,6 @@ vcsrepo { '/home/vagrant/ghcjs-base':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-base',
-  require => [Package['git']]
 }
 vcsrepo { '/home/vagrant/ghcjs-jquery':
   ensure => latest,
@@ -81,7 +76,6 @@ vcsrepo { '/home/vagrant/ghcjs-jquery':
   user => vagrant,
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-jquery',
-  require => [Package['git']]
 }
 
 file { "/home/vagrant/jsshell":
@@ -177,7 +171,8 @@ exec { 'build0':
               , Package['alex']
               , Package['libbz2-dev']
               , Package['darcs']
-              , Package['libncurses5-dev'] ],
+              , Package['libncurses5-dev']
+              , Exec['prep0']],
   subscribe => [ Vcsrepo['/home/vagrant/ghc-source'] ]
 }
 

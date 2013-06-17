@@ -8,11 +8,12 @@ echo " Syncing GHC source"
 echo "====================================" &&
 
 cd ghc-source &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
-./sync-all -r https://github.com/ghc get &&
-cabal update &&
+(
+./sync-all -r https://github.com/ghc get ||
+./sync-all -r https://github.com/ghc get ||
+./sync-all -r https://github.com/ghc get ||
+./sync-all -r https://github.com/ghc get ) &&
+(cabal update || cabal update || cabal update) &&
 
 echo "====================================" &&
 echo " Patching GHC" &&

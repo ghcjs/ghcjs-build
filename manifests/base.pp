@@ -19,6 +19,7 @@ package { 'libglu1-mesa-dev': ensure => present }
 package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
 Vcsrepo { require => Package[git] }
+Exec["apt-update"] -> Package <| |>
 vcsrepo { '/home/vagrant/ghc-source':
           ensure   => latest,
           provider => git,
@@ -26,7 +27,7 @@ vcsrepo { '/home/vagrant/ghc-source':
           user => vagrant,
           revision => 'master',
           # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
-          source => 'https://github.com/ghc/ghc'
+          source => 'https://github.com/ghc/ghc',
         }
 vcsrepo { '/home/vagrant/cabal':
   ensure => latest,
@@ -34,7 +35,7 @@ vcsrepo { '/home/vagrant/cabal':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/haskell/cabal'
+  source => 'https://github.com/haskell/cabal',
 }
 vcsrepo { '/home/vagrant/ghcjs-examples':
   ensure => latest,
@@ -42,7 +43,7 @@ vcsrepo { '/home/vagrant/ghcjs-examples':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-examples'
+  source => 'https://github.com/ghcjs/ghcjs-examples',
 }
 vcsrepo { '/home/vagrant/ghcjs':
   ensure => latest,
@@ -50,7 +51,7 @@ vcsrepo { '/home/vagrant/ghcjs':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs'
+  source => 'https://github.com/ghcjs/ghcjs',
 }
 vcsrepo { '/home/vagrant/ghcjs-prim':
   ensure => latest,
@@ -58,7 +59,7 @@ vcsrepo { '/home/vagrant/ghcjs-prim':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-prim'
+  source => 'https://github.com/ghcjs/ghcjs-prim',
 }
 vcsrepo { '/home/vagrant/ghcjs-base':
   ensure => latest,
@@ -66,7 +67,7 @@ vcsrepo { '/home/vagrant/ghcjs-base':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-base'
+  source => 'https://github.com/ghcjs/ghcjs-base',
 }
 vcsrepo { '/home/vagrant/ghcjs-jquery':
   ensure => latest,
@@ -74,7 +75,7 @@ vcsrepo { '/home/vagrant/ghcjs-jquery':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-jquery'
+  source => 'https://github.com/ghcjs/ghcjs-jquery',
 }
 
 file { "/home/vagrant/jsshell":
@@ -115,15 +116,29 @@ exec { "tar -xzf node-v0.10.10-linux-x86.tar.gz":
   group => vagrant
 }
 
-file { '/usr/lib/libgmp.so.3':
-  ensure => link,
-  target => '/usr/lib/i386-linux-gnu/libgmp.so.10'
-}
-
 file { "/home/vagrant/pkg":
   ensure => directory,
   owner => vagrant,
   group => vagrant
+}
+
+###############################
+# Prep 0: Update .profile
+###############################
+
+file { '/home/vagrant/prep0_profile.sh':
+  ensure => present,
+  source => "/vagrant/scripts/prep0_profile.sh",
+  owner => vagrant,
+  mode => 766
+}
+~>
+exec { 'prep0':
+  provider => 'shell',
+  user => vagrant,
+  group => vagrant,
+  creates => '/home/vagrant/prep0',
+  command => "/home/vagrant/prep0_profile.sh"
 }
 
 ###############################
@@ -156,7 +171,8 @@ exec { 'build0':
               , Package['alex']
               , Package['libbz2-dev']
               , Package['darcs']
-              , Package['libncurses5-dev'] ],
+              , Package['libncurses5-dev']
+              , Exec['prep0']],
   subscribe => [ Vcsrepo['/home/vagrant/ghc-source'] ]
 }
 
@@ -176,6 +192,7 @@ exec { 'build1':
   user => vagrant,
   group => vagrant,
   logoutput => true,
+  onlyif => "test -e '/home/vagrant/build0'",                
   creates => '/home/vagrant/build1',
   command => '/home/vagrant/stage1_cabalsrc.sh',
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -201,6 +218,7 @@ exec { 'build2':
   user => vagrant,
   group => vagrant,
   logoutput => true,
+  onlyif => "test -e '/home/vagrant/build1'",                
   creates => '/home/vagrant/build2',
   command => '/home/vagrant/stage2_cabal.sh',
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -227,6 +245,7 @@ exec { 'build3':
   user => vagrant,
   group => vagrant,
   logoutput => true,
+  onlyif => "test -e '/home/vagrant/build2'",                
   creates => '/home/vagrant/build3',
   command => '/home/vagrant/stage3_ghcjs.sh',
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",

@@ -22,7 +22,7 @@ cd ../process &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
 cd ../../.. &&
 
-cd .ghcjs/i386-linux-* &&
+cd .ghcjs/*-linux-* &&
 git clone https://github.com/ghcjs/shims &&
 cd ../.. &&
 

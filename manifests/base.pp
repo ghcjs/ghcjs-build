@@ -77,7 +77,15 @@ vcsrepo { '/home/vagrant/ghcjs-jquery':
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-jquery',
 }
-
+vcsrepo { '/home/vagrant/pkg/generic-deriving':
+  ensure => latest,
+  provider => git,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/co-dan/generic-deriving',
+  require => File["/home/vagrant/pkg"]
+}
 file { "/home/vagrant/jsshell":
   ensure => directory,
   owner => vagrant,
@@ -199,7 +207,8 @@ exec { 'build1':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
              , Package['ghc']
-             , File['/home/vagrant/pkg'] ],
+             , File['/home/vagrant/pkg']
+             , Vcsrepo['/home/vagrant/pkg/generic-deriving']],
   subscribe => [ Exec['build0'] ]
 }
 

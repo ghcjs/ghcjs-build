@@ -38,6 +38,9 @@ install_src_pkg 'Tensor' '1.0.0.1.1' &&
 install_src_pkg 'jmacro' '0.6.7.0.1'
 ) &&
 
+cd /home/vagrant/pkg/generic-deriving && 
+cabal install &&
+
 touch /home/vagrant/build1 &&
 
 echo "Finished: $0"

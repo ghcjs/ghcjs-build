@@ -7,9 +7,9 @@ Vagrant::Config.run do |config|
   # please see the online documentation at vagrantup.com.
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "precise64"
+  config.vm.box = "precise32"
 
-  config.vm.customize ["modifyvm", :id, "--cpus", 4, "--memory", 5700, "--ioapic", "on"]
+  config.vm.customize ["modifyvm", :id, "--cpus", 4, "--memory", 3700, "--ioapic", "on"]
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.

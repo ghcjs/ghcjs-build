@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-Vagrant::Config.run do |config|
+Vagrant.configure("2") do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
@@ -9,7 +9,9 @@ Vagrant::Config.run do |config|
   # Every Vagrant virtual environment requires a box to build off of.
   config.vm.box = "precise32"
 
-  config.vm.customize ["modifyvm", :id, "--cpus", 4, "--memory", 3700, "--ioapic", "on"]
+  config.vm.provider "virtualbox" do |v|
+    v.customize ["modifyvm", :id, "--cpus", 4, "--memory", 3700, "--ioapic", "on"]
+  end
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.

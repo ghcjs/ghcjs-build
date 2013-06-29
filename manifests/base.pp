@@ -69,6 +69,14 @@ vcsrepo { '/home/vagrant/ghcjs-base':
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-base',
 }
+vcsrepo { '/home/vagrant/ghcjs-dom':
+  ensure => latest,
+  provider => git,
+  owner => vagrant,
+  user => vagrant,
+  revision => 'master',
+  source => 'https://github.com/ghcjs/ghcjs-dom',
+}
 vcsrepo { '/home/vagrant/ghcjs-jquery':
   ensure => latest,
   provider => git,

@@ -36,6 +36,11 @@ cd ghcjs-base &&
 cabal install --ghcjs &&
 cd .. &&
 
+echo "== Installing ghcjs-dom" &&
+cd ghcjs-dom &&
+cabal install --ghcjs &&
+cd .. &&
+
 echo "== Installing ghcjs-jquery" &&
 cd ghcjs-jquery &&
 cabal install --ghcjs &&

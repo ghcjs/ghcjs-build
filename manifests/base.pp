@@ -91,7 +91,7 @@ vcsrepo { '/home/vagrant/pkg/generic-deriving':
   owner => vagrant,
   user => vagrant,
   revision => 'master',
-  source => 'https://github.com/co-dan/generic-deriving',
+  source => 'https://github.com/dreixel/generic-deriving',
   require => File["/home/vagrant/pkg"]
 }
 file { "/home/vagrant/jsshell":

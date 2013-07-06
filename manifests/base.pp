@@ -28,7 +28,7 @@ echo 'LC_ALL=en_US.utf8' >> /home/vagrant/.profile
 
 (cd /home/vagrant &&
 
-wget http://hdiff.luite.com/ghcjs/ghcjs-prebuilt.tar.gz &&
+wget -c http://hdiff.luite.com/ghcjs/ghcjs-prebuilt.tar.gz &&
 cd /home &&
 tar -xzvf vagrant/ghcjs-prebuilt.tar.gz &&
 

@@ -35,11 +35,9 @@ install_src_pkg 'time' '1.4.0.2.1' &&
 install_src_pkg 'HTTP' '4000.2.6.0.1' &&
 install_src_pkg 'entropy' '0.2.2.1' &&
 install_src_pkg 'Tensor' '1.0.0.1.1' &&
-install_src_pkg 'jmacro' '0.6.7.0.1'
+install_src_pkg 'jmacro' '0.6.7.0.1' &&
+install_src_pkg 'generic-deriving' '1.5.0.0.1'
 ) &&
-
-cd /home/vagrant/pkg/generic-deriving && 
-cabal install &&
 
 touch /home/vagrant/build1 &&
 

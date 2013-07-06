@@ -85,15 +85,6 @@ vcsrepo { '/home/vagrant/ghcjs-jquery':
   revision => 'master',
   source => 'https://github.com/ghcjs/ghcjs-jquery',
 }
-vcsrepo { '/home/vagrant/pkg/generic-deriving':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/co-dan/generic-deriving',
-  require => File["/home/vagrant/pkg"]
-}
 file { "/home/vagrant/jsshell":
   ensure => directory,
   owner => vagrant,

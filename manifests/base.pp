@@ -206,8 +206,7 @@ exec { 'build1':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
              , Package['ghc']
-             , File['/home/vagrant/pkg']
-             , Vcsrepo['/home/vagrant/pkg/generic-deriving']],
+             , File['/home/vagrant/pkg']],
   subscribe => [ Exec['build0'] ]
 }
 

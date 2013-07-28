@@ -8,15 +8,16 @@ echo " Patching and installing Cabal"
 echo "===================================="
 
 cd cabal &&
-wget -q http://ghcjs.github.io/patches/cabal-ghcjs.patch &&
-(test -e Cabal/Distribution/Simple/GHCJS.hs || patch -p1 < cabal-ghcjs.patch) &&
+(git remote add upstream https://github.com/haskell/cabal || true) &&
+git fetch upstream &&
+git rebase upstream/master &&
 
 echo "== Cabal patched, installing" &&
 
 cd Cabal &&
-cabal install &&
+cabal install --force-reinstalls &&
 cd ../cabal-install &&
-cabal install &&
+cabal install --force-reinstalls &&
 cd ../.. &&
 hash -r &&
 

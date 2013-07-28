@@ -34,8 +34,8 @@ vcsrepo { '/home/vagrant/cabal':
   provider => git,
   owner => vagrant,
   user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/haskell/cabal',
+  revision => 'ghcjs',
+  source => 'https://github.com/ghcjs/cabal.git',
 }
 vcsrepo { '/home/vagrant/ghcjs-examples':
   ensure => latest,

@@ -37,10 +37,10 @@ install_src_pkg 'entropy' '0.2.2.2' &&
 install_src_pkg 'Tensor' '1.0.0.1.1' &&
 install_src_pkg 'jmacro' '0.6.7.0.1' &&
 install_src_pkg 'generic-deriving' '1.5.0.0.1' &&
-install_src_pkg 'tagged' '0.6.2'
+install_src_pkg 'tagged' '0.6.2' &&
 install_src_pkg 'crypto-api' '0.12.2.1.1' &&
 install_src_pkg 'profunctor-extras' '3.3.1.1' &&
-install_src_pkg 'reflection' '1.3.2.1' &&
+install_src_pkg 'reflection' '1.3.2.1'
 ) &&
 
 touch /home/vagrant/build1 &&

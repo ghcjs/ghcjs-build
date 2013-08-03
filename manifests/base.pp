@@ -90,24 +90,26 @@ file { "/home/vagrant/jsshell":
   owner => vagrant,
   group => vagrant
 }
-# exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip":
-#   creates => "/home/vagrant/jsshell/jsshell.zip",
-#   cwd => "/home/vagrant/jsshell",
-#   path => ["/usr/bin"],
-#   require => File["/home/vagrant/jsshell"],
-#   user => vagrant,
-#   group => vagrant
-# }
-# ->
-# exec { "unzip /home/vagrant/jsshell/jsshell.zip":
-#   cwd => "/home/vagrant/jsshell",
-#   creates => "/home/vagrant/jsshell/js",
-#   path => ["/usr/bin"],
-#   user => vagrant,
-#   group => vagrant
-# }
-exec { "wget http://nodejs.org/dist/v0.10.10/node-v0.10.10-linux-x86.tar.gz":
-  creates => "/home/vagrant/node-v0.10.10-linux-x86.tar.gz",
+
+exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip":
+  creates => "/home/vagrant/jsshell/jsshell.zip",
+  cwd => "/home/vagrant/jsshell",
+  path => ["/usr/bin"],
+  require => File["/home/vagrant/jsshell"],
+  user => vagrant,
+  group => vagrant
+}
+->
+exec { "unzip /home/vagrant/jsshell/jsshell.zip":
+  cwd => "/home/vagrant/jsshell",
+  creates => "/home/vagrant/jsshell/js",
+  path => ["/usr/bin"],
+  user => vagrant,
+  group => vagrant
+}
+
+exec { "wget http://nodejs.org/dist/v0.10.15/node-v0.10.15-linux-x86.tar.gz":
+  creates => "/home/vagrant/node-v0.10.15-linux-x86.tar.gz",
   cwd => "/home/vagrant",
   path => ["/usr/bin"],
   user => vagrant,
@@ -115,12 +117,18 @@ exec { "wget http://nodejs.org/dist/v0.10.10/node-v0.10.10-linux-x86.tar.gz":
 #  require => [Package['wget']]
 }
 ->
-exec { "tar -xzf node-v0.10.10-linux-x86.tar.gz":
-  creates => "/home/vagrant/node-v0.10.10-linux-x86/bin/node",
+exec { "tar -xzf node-v0.10.15-linux-x86.tar.gz":
+  creates => "/home/vagrant/node-v0.10.15-linux-x86/bin/node",
   cwd => "/home/vagrant",
   path => ["/bin"],
   user => vagrant,
   group => vagrant
+}
+
+file { "/home/vagrant/node":
+  ensure  => link,
+  target  => "/home/vagrant/node-v0.10.15-linux-x86",
+  require => File["/home/vagrant/node-v0.10.15-linux-x86/bin/node"]
 }
 
 file { "/home/vagrant/pkg":

@@ -22,9 +22,7 @@ cd ../process &&
 cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
 cd ../../.. &&
 
-cd .ghcjs/*-linux-* &&
-git clone https://github.com/ghcjs/shims &&
-cd ../.. &&
+cp -rf ghcjs-build-refs/shims .ghcjs/*-linux-*/ &&
 
 echo "== Installing ghcjs-prim" &&
 cd ghcjs-prim &&

@@ -20,71 +20,15 @@ package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
 Vcsrepo { require => Package[git] }
 Exec["apt-update"] -> Package <| |>
-vcsrepo { '/home/vagrant/ghc-source':
+vcsrepo { '/home/vagrant/ghcjs-build-refs':
           ensure   => latest,
           provider => git,
           owner => vagrant,
           user => vagrant,
           revision => 'master',
           # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
-          source => 'https://github.com/ghc/ghc',
+          source => 'https://github.com/ghcjs/ghcjs-build-refs',
         }
-vcsrepo { '/home/vagrant/cabal':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'ghcjs',
-  source => 'https://github.com/ghcjs/cabal.git',
-}
-vcsrepo { '/home/vagrant/ghcjs-examples':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-examples',
-}
-vcsrepo { '/home/vagrant/ghcjs':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs',
-}
-vcsrepo { '/home/vagrant/ghcjs-prim':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-prim',
-}
-vcsrepo { '/home/vagrant/ghcjs-base':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-base',
-}
-vcsrepo { '/home/vagrant/ghcjs-dom':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-dom',
-}
-vcsrepo { '/home/vagrant/ghcjs-jquery':
-  ensure => latest,
-  provider => git,
-  owner => vagrant,
-  user => vagrant,
-  revision => 'master',
-  source => 'https://github.com/ghcjs/ghcjs-jquery',
-}
 file { "/home/vagrant/jsshell":
   ensure => directory,
   owner => vagrant,
@@ -124,11 +68,11 @@ exec { "tar -xzf node-v0.10.15-linux-x86.tar.gz":
   user => vagrant,
   group => vagrant
 }
-
+~>
 file { "/home/vagrant/node":
   ensure  => link,
   target  => "/home/vagrant/node-v0.10.15-linux-x86",
-  require => File["/home/vagrant/node-v0.10.15-linux-x86/bin/node"]
+#  require => File['/home/vagrant/node-v0.10.15-linux-x86/bin/node']
 }
 
 file { "/home/vagrant/pkg":
@@ -179,7 +123,7 @@ exec { 'build0':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
               , Package['ghc']
-              , Vcsrepo['/home/vagrant/ghc-source']
+              , Vcsrepo['/home/vagrant/ghcjs-build-refs']
               , Package['happy']
               , Package['autoconf']
               , Package['libtool']
@@ -188,7 +132,7 @@ exec { 'build0':
               , Package['darcs']
               , Package['libncurses5-dev']
               , Exec['prep0']],
-  subscribe => [ Vcsrepo['/home/vagrant/ghc-source'] ]
+  subscribe => [ Vcsrepo['/home/vagrant/ghcjs-build-refs'] ]
 }
 
 #####################################################
@@ -241,7 +185,7 @@ exec { 'build2':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
              , Package['ghc']
-             , Vcsrepo['/home/vagrant/cabal']],
+             , Vcsrepo['/home/vagrant/ghcjs-build-refs']],
   subscribe => [ Exec['build1'] ]
 }
 
@@ -268,10 +212,7 @@ exec { 'build3':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
              , Package['ghc']
-             , Vcsrepo['/home/vagrant/ghcjs']
-             , Vcsrepo['/home/vagrant/ghcjs-base']
-             , Vcsrepo['/home/vagrant/ghcjs-prim']
-             , Vcsrepo['/home/vagrant/ghcjs-examples']],
+             , Vcsrepo['/home/vagrant/ghcjs-build-refs']],
   subscribe => [ Exec['build2'] ]
 }
 

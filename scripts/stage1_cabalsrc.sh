@@ -30,7 +30,7 @@ install_src_pkg 'lens' '3.10.0.0.2' &&
 install_src_pkg 'aeson' '0.6.1.0.1' &&
 install_src_pkg 'yaml' '0.8.2.3' &&
 install_src_pkg 'haskell-src-meta' '0.6.0.2.1' &&
-install_src_pkg 'th-orphans' '0.6.0.0.1' &&
+install_src_pkg 'th-orphans' '0.7.0.1.1' &&
 install_src_pkg 'th-lift' '0.5.5.0.1' &&
 install_src_pkg 'time' '1.4.0.2.1' &&
 install_src_pkg 'HTTP' '4000.2.6.0.1' &&

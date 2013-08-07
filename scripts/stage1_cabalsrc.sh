@@ -26,7 +26,7 @@ install_src_pkg 'vector' '0.10.9' &&
 install_src_pkg 'optparse-applicative' '0.5.2.1.1' &&
 install_src_pkg 'MonadCatchIO-transformers' '0.3.0.0.1' &&
 install_src_pkg 'contravariant' '0.4.3.1' &&
-install_src_pkg 'lens' '3.10.0.0.2' &&
+install_src_pkg 'lens' '3.10.0.0.3' &&
 install_src_pkg 'aeson' '0.6.1.0.1' &&
 install_src_pkg 'yaml' '0.8.2.3' &&
 install_src_pkg 'haskell-src-meta' '0.6.0.2.1' &&

@@ -31,12 +31,12 @@ browser.
 Updating ghcjs-build-refs
 ====
 
-By default ghcjs-build will use ghcjs-build-refs to select which
+By default ghcjs-build will use `ghcjs-build-refs <http://github.com/ghcjs/ghcjs-build-refs/>`_ to select which
 commits to use for the various git repositories.
 This helps us get a set of commits that are compatible.
 
 If you want to try out the very latest version of all the
-varsious repositories then edit 'stage0_ghc.sh and uncomment
+varsious repositories then edit 'stage0_ghc.sh' and uncomment
 the section labeled 'Updating ghc-build-refs'.
 
 Then run 'vagrant up' as normal.

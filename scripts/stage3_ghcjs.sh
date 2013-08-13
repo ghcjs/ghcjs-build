@@ -8,7 +8,7 @@ echo " Installing GHCJS"
 echo "===================================="
 
 cd ghcjs &&
-cabal install --enable-executable-dynamic &&
+cabal install -j4 --enable-executable-dynamic &&
 
 cd ../ghcjs-boot &&
 ghcjs-boot --init &&

@@ -4,22 +4,21 @@ export LC_ALL=en_US.utf8
 cd /home/vagrant
 
 echo "===================================="
-echo " Patching and installing Cabal"
+echo " Installing Cabal and cabal-install"
 echo "===================================="
 
-cd cabal &&
-(git remote add upstream https://github.com/haskell/cabal || true) &&
-git fetch upstream &&
-git rebase upstream/master &&
-
-echo "== Cabal patched, installing" &&
-
-cd Cabal &&
+cd cabal/Cabal &&
 cabal install --force-reinstalls &&
 cd ../cabal-install &&
 cabal install --force-reinstalls &&
 cd ../.. &&
 hash -r &&
+
+# reinstall the library with the new cabal-install
+rm -r ~/.ghc &&
+cd cabal/Cabal &&
+cabal install --force-reinstalls &&
+cd ../.. &&
 
 touch /home/vagrant/build2 &&
 

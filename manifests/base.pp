@@ -36,20 +36,21 @@ file { "/home/vagrant/jsshell":
 }
 
 exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip":
-  creates => "/home/vagrant/jsshell/jsshell.zip",
-  cwd => "/home/vagrant/jsshell",
+  creates => "/home/vagrant/jsshell-linux-i686.zip",
+  cwd => "/home/vagrant",
   path => ["/usr/bin"],
   require => File["/home/vagrant/jsshell"],
   user => vagrant,
   group => vagrant
 }
 ->
-exec { "unzip /home/vagrant/jsshell/jsshell.zip":
-  cwd => "/home/vagrant/jsshell",
+exec { "unzip /home/vagrant/jsshell-linux-i686.zip -d jsshell":
+  cwd => "/home/vagrant",
   creates => "/home/vagrant/jsshell/js",
   path => ["/usr/bin"],
   user => vagrant,
-  group => vagrant
+  group => vagrant,
+  require => Package['unzip']
 }
 
 exec { "wget http://nodejs.org/dist/v0.10.15/node-v0.10.15-linux-x86.tar.gz":

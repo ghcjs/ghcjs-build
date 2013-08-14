@@ -2,7 +2,12 @@
 A Vagrant setup to build ghcjs
 ======
 
-Everything should build if you do a 'vagrant up', but note that it takes many
+Make sure you pull down all the submodules (including the submodules of submodules).
+If in doubt run this::
+
+  git submodule update --init --recursive
+
+Then everything should build if you do a 'vagrant up', but note that it takes many
 hours because of the time to build ghcjs-ghc.
 
 When it is complete, type::
@@ -28,22 +33,19 @@ Then open http://localhost:3030/ in your host machines web
 browser.
 
 
-Updating ghcjs-build-refs
+Updating the versions of GHC, Cabal and GHCJS used
 ====
 
-By default ghcjs-build will use `ghcjs-build-refs <http://github.com/ghcjs/ghcjs-build-refs/>`_ to select which
-commits to use for the various git repositories.
-This helps us get a set of commits that are compatible.
+By default ghcjs-build submodules point versions we have tested.
+But if you want to try out the latest and greatest you can update
+to the latest ghc head before running vagrant up with::
 
-If you want to try out the very latest version of all the
-varsious repositories then edit 'stage0_ghc.sh' and uncomment
-the section labeled 'Updating ghc-build-refs'.
+  scripts/update_ghc.sh
 
-Then run 'vagrant up' as normal.
+You can update the cabal submodule with::
 
-If the new VM is good then you can update the submodule refs
-by committing and pusing '/home/vagrant/ghcjs-build-refs'.
-If the cabal submodule has changed then it will contain a
-rebased version of the patch.  Please add a new branch to it
-and push that too.
+  scripts/update_cabal.sh
 
+And you can update the ghcjs submodules with::
+
+  scripts/update_ghcjs.sh

@@ -1,0 +1,93 @@
+[submodule "refs/cabal"]
+	path = refs/cabal
+	url = https://github.com/ghcjs/cabal.git
+[submodule "refs/ghc-packages/libraries/array"]
+	path = refs/ghc-packages/libraries/array
+	url = https://github.com/ghc/packages-array.git
+[submodule "refs/ghc-packages/libffi-tarballs"]
+	path = refs/ghc-packages/libffi-tarballs
+	url = https://github.com/ghc/libffi-tarballs.git
+[submodule "refs/ghc-packages/libraries/base"]
+	path = refs/ghc-packages/libraries/base
+	url = https://github.com/ghc/packages-base.git
+[submodule "refs/ghc-packages/libraries/deepseq"]
+	path = refs/ghc-packages/libraries/deepseq
+	url = https://github.com/ghc/packages-deepseq.git
+[submodule "refs/ghc-packages/libraries/directory"]
+	path = refs/ghc-packages/libraries/directory
+	url = https://github.com/ghc/packages-directory.git
+[submodule "refs/ghc-packages/libraries/dph"]
+	path = refs/ghc-packages/libraries/dph
+	url = https://github.com/ghc/packages-dph.git
+[submodule "refs/ghc-packages/libraries/filepath"]
+	path = refs/ghc-packages/libraries/filepath
+	url = https://github.com/ghc/packages-filepath.git
+[submodule "refs/ghc-packages/libraries/ghc-prim"]
+	path = refs/ghc-packages/libraries/ghc-prim
+	url = https://github.com/ghc/packages-ghc-prim.git
+[submodule "refs/ghc-packages/libraries/haskell98"]
+	path = refs/ghc-packages/libraries/haskell98
+	url = https://github.com/ghc/packages-haskell98.git
+[submodule "refs/ghc-packages/libraries/haskell2010"]
+	path = refs/ghc-packages/libraries/haskell2010
+	url = https://github.com/ghc/packages-haskell2010.git
+[submodule "refs/ghc-packages/libraries/hoopl"]
+	path = refs/ghc-packages/libraries/hoopl
+	url = https://github.com/ghc/packages-hoopl.git
+[submodule "refs/ghc-packages/libraries/hpc"]
+	path = refs/ghc-packages/libraries/hpc
+	url = https://github.com/ghc/packages-hpc.git
+[submodule "refs/ghc-packages/libraries/integer-gmp"]
+	path = refs/ghc-packages/libraries/integer-gmp
+	url = https://github.com/ghc/packages-integer-gmp.git
+[submodule "refs/ghc-packages/libraries/integer-simple"]
+	path = refs/ghc-packages/libraries/integer-simple
+	url = https://github.com/ghc/packages-integer-simple.git
+[submodule "refs/ghc-packages/libraries/old-locale"]
+	path = refs/ghc-packages/libraries/old-locale
+	url = https://github.com/ghc/packages-old-locale.git
+[submodule "refs/ghc-packages/libraries/old-time"]
+	path = refs/ghc-packages/libraries/old-time
+	url = https://github.com/ghc/packages-old-time.git
+[submodule "refs/ghc-packages/libraries/process"]
+	path = refs/ghc-packages/libraries/process
+	url = https://github.com/ghc/packages-process.git
+[submodule "refs/ghc-packages/libraries/template-haskell"]
+	path = refs/ghc-packages/libraries/template-haskell
+	url = https://github.com/ghc/packages-template-haskell.git
+[submodule "refs/ghc-packages/libraries/unix"]
+	path = refs/ghc-packages/libraries/unix
+	url = https://github.com/ghc/packages-unix.git
+[submodule "refs/ghc-packages/utils/haddock"]
+	path = refs/ghc-packages/utils/haddock
+	url = https://github.com/ghc/haddock.git
+[submodule "refs/ghc-packages/utils/hsc2hs"]
+	path = refs/ghc-packages/utils/hsc2hs
+	url = https://github.com/ghc/hsc2hs.git
+[submodule "refs/ghc-source"]
+	path = refs/ghc-source
+	url = https://github.com/ghc/ghc
+[submodule "refs/ghcjs"]
+	path = refs/ghcjs
+	url = https://github.com/ghcjs/ghcjs
+[submodule "refs/ghcjs-base"]
+	path = refs/ghcjs-base
+	url = https://github.com/ghcjs/ghcjs-base
+[submodule "refs/ghcjs-boot"]
+	path = refs/ghcjs-boot
+	url = https://github.com/ghc/ghc
+[submodule "refs/ghcjs-dom"]
+	path = refs/ghcjs-dom
+	url = https://github.com/ghcjs/ghcjs-dom
+[submodule "refs/ghcjs-examples"]
+	path = refs/ghcjs-examples
+	url = https://github.com/ghcjs/ghcjs-examples
+[submodule "refs/ghcjs-jquery"]
+	path = refs/ghcjs-jquery
+	url = https://github.com/ghcjs/ghcjs-jquery
+[submodule "refs/ghcjs-prim"]
+	path = refs/ghcjs-prim
+	url = https://github.com/ghcjs/ghcjs-prim
+[submodule "refs/shims"]
+	path = refs/shims
+	url = https://github.com/ghcjs/shims

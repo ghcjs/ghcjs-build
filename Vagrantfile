@@ -25,6 +25,7 @@ Vagrant.configure("2") do |config|
   # config.vm.share_folder "ghcjs-libraries", "/tmp/ghcjs-libraries", "/usr/src/ghcjs/ghc"
   # config.vm.share_folder "archives", "/tmp/install-archives", "archives"
   # config.vm.share_folder "outputs", "/tmp/outputs", "outputs"
+  config.vm.synced_folder "refs", "/home/vagrant/ghcjs-build-refs"
 
   # Enable provisioning with Puppet stand alone.  Puppet manifests
   # are contained in a directory path relative to this Vagrantfile.

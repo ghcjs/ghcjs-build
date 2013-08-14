@@ -4,49 +4,6 @@ export LC_ALL=en_US.utf8
 cd /home/vagrant
 
 echo "====================================" && 
-echo " Updating ghc-build-refs" &&
-echo "====================================" &&
-
-# set to 1 if you want to get the latest HEAD, 0 for tested commit in ghcjs-build-refs
-LATEST_CABAL=0
-LATEST_GHC=1
-LATEST_GHCJS=1
-
-# Uncoment this if you want to try out the very latest builds
-cd ghcjs-build-refs &&
-if [ $LATEST_GHC -ne 0 ]
-then
-	for a in \
-			ghc-source \
-			ghc-packages/libffi-tarballs \
-			ghc-packages/utils/* \
-			ghc-packages/libraries/*; \
-		do (echo "Updating $a" && cd "$a" && git checkout master && git pull) || exit 1; \
-	done
-fi
-
-if [ $LATEST_GHCJS -ne 0 ]
-then
-	for a in \
-                        shims \
-	                ghcjs \
-        	        ghcjs-*; \
-		do (echo "Updating $a" && cd "$a" && git checkout master && git pull) || exit 1; \
-	done 
-fi
-
-cd .. &&
-
-if [ $LATEST_CABAL -ne 0 ]
-then
-	cd ghcjs-build-refs/cabal &&
-	(git remote add upstream https://github.com/haskell/cabal || true) &&
-	git fetch upstream &&
-	git rebase upstream/master &&
-	cd ../.. 
-fi
-
-echo "====================================" && 
 echo " Copy the ghc-build-refs into place" &&
 echo "====================================" &&
 

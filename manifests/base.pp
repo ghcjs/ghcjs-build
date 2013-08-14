@@ -20,15 +20,6 @@ package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
 Vcsrepo { require => Package[git] }
 Exec["apt-update"] -> Package <| |>
-vcsrepo { '/home/vagrant/ghcjs-build-refs':
-          ensure   => latest,
-          provider => git,
-          owner => vagrant,
-          user => vagrant,
-          revision => 'master',
-          # revision => '2f9278d2bfeff16fa06b71cdc4453558c8228bb0',
-          source => 'https://github.com/ghcjs/ghcjs-build-refs',
-        }
 file { "/home/vagrant/jsshell":
   ensure => directory,
   owner => vagrant,
@@ -124,7 +115,6 @@ exec { 'build0':
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
               , Package['ghc']
-              , Vcsrepo['/home/vagrant/ghcjs-build-refs']
               , Package['happy']
               , Package['autoconf']
               , Package['libtool']
@@ -132,8 +122,7 @@ exec { 'build0':
               , Package['libbz2-dev']
               , Package['darcs']
               , Package['libncurses5-dev']
-              , Exec['prep0']],
-  subscribe => [ Vcsrepo['/home/vagrant/ghcjs-build-refs'] ]
+              , Exec['prep0']]
 }
 
 #####################################################
@@ -185,8 +174,7 @@ exec { 'build2':
   command => '/home/vagrant/stage2_cabal.sh',
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
-             , Package['ghc']
-             , Vcsrepo['/home/vagrant/ghcjs-build-refs']],
+             , Package['ghc']],
   subscribe => [ Exec['build1'] ]
 }
 
@@ -212,8 +200,7 @@ exec { 'build3':
   command => '/home/vagrant/stage3_ghcjs.sh',
   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   require => [ Package['cabal-install']
-             , Package['ghc']
-             , Vcsrepo['/home/vagrant/ghcjs-build-refs']],
+             , Package['ghc']],
   subscribe => [ Exec['build2'] ]
 }
 

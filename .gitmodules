@@ -73,9 +73,6 @@
 [submodule "refs/ghcjs-base"]
 	path = refs/ghcjs-base
 	url = https://github.com/ghcjs/ghcjs-base
-[submodule "refs/ghcjs-boot"]
-	path = refs/ghcjs-boot
-	url = https://github.com/ghc/ghc
 [submodule "refs/ghcjs-dom"]
 	path = refs/ghcjs-dom
 	url = https://github.com/ghcjs/ghcjs-dom

@@ -16,19 +16,17 @@ cp -rf ghcjs-build-refs/ghc-packages/utils/* ghc-source/utils/ &&
 cp -rf ghcjs-build-refs/ghc-packages/libraries/* ghc-source/libraries/ &&
 
 echo "====================================" &&
-echo " Syncing GHC source" &&
+echo " cabal update" &&
 echo "====================================" &&
 
-cp -rf ghcjs-build-refs/ghc-packages/libffi-tarballs ghcjs-build-refs/ghc-source/ &&
-cp -rf ghcjs-build-refs/ghc-packages/libraries/* ghcjs-build-refs/ghc-source/libraries/ &&
-cp -rf ghcjs-build-refs/ghc-packages/utils/* ghcjs-build-refs/ghc-source/utils/ &&
-cd ghc-source &&
 (cabal update || cabal update || cabal update) &&
+
 
 echo "====================================" &&
 echo " Patching GHC" &&
 echo "====================================" &&
 
+cd ghc-source &&
 patch -p1 < /home/vagrant/ghcjs-build-refs/patches/ghc-ghcjs.patch &&
 echo 'BuildFlavour = quick' > mk/build.mk &&
 cat mk/build.mk.sample >> mk/build.mk &&

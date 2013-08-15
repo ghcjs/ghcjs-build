@@ -40,10 +40,10 @@ index b0c9bd3..149968d 100644
  -- ---------------------------------------------------------------------
  -- Find and print local and external declarations for a list of
 diff --git a/compiler/deSugar/DsForeign.lhs b/compiler/deSugar/DsForeign.lhs
-index 1053b91..24c46b5 100644
+index 1053b91..a1c362b 100644
 --- a/compiler/deSugar/DsForeign.lhs
 +++ b/compiler/deSugar/DsForeign.lhs
-@@ -6,7 +6,12 @@
+@@ -6,7 +6,15 @@
  Desugaring foreign declarations (see also DsCCall).
  
  \begin{code}
@@ -53,11 +53,14 @@ index 1053b91..24c46b5 100644
 +module DsForeign ( dsForeigns
 +                 , dsForeigns'
 +                 , DsForeignsHook (..)
++                 , dsFImport, dsCImport, dsFCall, dsPrimCall
++                 , dsFExport, dsFExportDynamic, mkFExportCBits
++                 , toCType
 +                 ) where
  
  #include "HsVersions.h"
  import TcRnMonad        -- temp
-@@ -30,6 +35,7 @@ import TyCon
+@@ -30,6 +38,7 @@ import TyCon
  import Coercion
  import TcEnv
  import TcType
@@ -65,7 +68,7 @@ index 1053b91..24c46b5 100644
  
  import CmmExpr
  import CmmUtils
-@@ -51,6 +57,7 @@ import Util
+@@ -51,6 +60,7 @@ import Util
  
  import Data.Maybe
  import Data.List
@@ -73,7 +76,7 @@ index 1053b91..24c46b5 100644
  \end{code}
  
  Desugaring of @foreign@ declarations is naturally split up into
-@@ -70,11 +77,18 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
+@@ -70,11 +80,18 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
  type Binding = (Id, CoreExpr)   -- No rec/nonrec structure;
                                  -- the occurrence analyser will sort it all out
  
@@ -130,7 +133,7 @@ index 2a7a8c4..cbd172d 100644
  compiler_stage2_dll0_HS_OBJS = \
      $(patsubst %,compiler/stage2/build/%.$(dyn_osuf),$(subst .,/,$(compiler_stage2_dll0_MODULES)))
 diff --git a/compiler/ghci/Linker.lhs b/compiler/ghci/Linker.lhs
-index a409e7f..235019e 100644
+index 45bc9d5..4bf1221 100644
 --- a/compiler/ghci/Linker.lhs
 +++ b/compiler/ghci/Linker.lhs
 @@ -8,6 +8,7 @@
@@ -171,7 +174,7 @@ index a409e7f..235019e 100644
  import System.FilePath
  import System.IO
  #if __GLASGOW_HASKELL__ > 704
-@@ -1166,8 +1171,16 @@ loadFrameworks platform pkg
+@@ -1170,8 +1175,16 @@ loadFrameworks platform pkg
  -- which generally means that it should be a dynamic library in the
  -- standard system search path.
  
@@ -263,7 +266,7 @@ index 6f898fa..def9e2b 100644
              PrimTarget   _ -> CC_Ccc
  
 diff --git a/compiler/main/DriverPipeline.hs b/compiler/main/DriverPipeline.hs
-index aa49e70..9af5000 100644
+index c5bcdc7..5f9e6db 100644
 --- a/compiler/main/DriverPipeline.hs
 +++ b/compiler/main/DriverPipeline.hs
 @@ -1,5 +1,5 @@
@@ -273,7 +276,7 @@ index aa49e70..9af5000 100644
  -- -fno-cse is needed for GLOBAL_VAR's to behave properly
  
  -----------------------------------------------------------------------------
-@@ -23,6 +23,12 @@ module DriverPipeline (
+@@ -23,6 +23,13 @@ module DriverPipeline (
     compileOne, compileOne',
     link,
  
@@ -282,11 +285,12 @@ index aa49e70..9af5000 100644
 +   PhasePlus(..), CompPipeline(..), PipeEnv(..), PipeState(..),
 +   phaseOutputFilename, getPipeState, getPipeEnv,
 +   hscPostBackendPhase, getLocation, setModLocation, setDynFlags,
-+   runPhase
++   runPhase,
++   LinkBinaryHook(..), linkBinary'
    ) where
  
  #include "HsVersions.h"
-@@ -52,6 +58,8 @@ import LlvmCodeGen      ( llvmFixupAsm )
+@@ -52,6 +59,8 @@ import LlvmCodeGen      ( llvmFixupAsm )
  import MonadUtils
  import Platform
  import TcRnTypes
@@ -295,7 +299,7 @@ index aa49e70..9af5000 100644
  
  import Exception
  import Data.IORef       ( readIORef )
-@@ -61,6 +69,7 @@ import System.IO
+@@ -61,6 +70,7 @@ import System.IO
  import Control.Monad
  import Data.List        ( isSuffixOf )
  import Data.Maybe
@@ -303,7 +307,7 @@ index aa49e70..9af5000 100644
  import System.Environment
  import Data.Char
  
-@@ -525,9 +534,8 @@ runPipeline
+@@ -525,9 +535,8 @@ runPipeline
  runPipeline stop_phase hsc_env0 (input_fn, mb_phase)
               mb_basename output maybe_loc maybe_stub_o
  
@@ -315,7 +319,7 @@ index aa49e70..9af5000 100644
               -- Decide where dump files should go based on the pipeline output
               dflags = dflags0 { dumpPrefix = Just (basename ++ ".") }
               hsc_env = hsc_env0 {hsc_dflags = dflags}
-@@ -719,7 +727,7 @@ pipeLoop phase input_fn = do
+@@ -719,7 +728,7 @@ pipeLoop phase input_fn = do
     _
       -> do liftIO $ debugTraceMsg dflags 4
                                    (ptext (sLit "Running phase") <+> ppr phase)
@@ -324,7 +328,7 @@ index aa49e70..9af5000 100644
             r <- pipeLoop next_phase output_fn
             case phase of
                 HscOut {} ->
-@@ -732,6 +740,15 @@ pipeLoop phase input_fn = do
+@@ -732,6 +741,15 @@ pipeLoop phase input_fn = do
                     return ()
             return r
  
@@ -340,7 +344,7 @@ index aa49e70..9af5000 100644
  -- -----------------------------------------------------------------------------
  -- In each phase, we need to know into what filename to generate the
  -- output.  All the logic about which filenames we generate output
-@@ -853,7 +870,7 @@ runPhase (RealPhase (Cpp sf)) input_fn dflags0
+@@ -853,7 +871,7 @@ runPhase (RealPhase (Cpp sf)) input_fn dflags0
    = do
         src_opts <- liftIO $ getOptionsFromFile dflags0 input_fn
         (dflags1, unhandled_flags, warns)
@@ -349,7 +353,7 @@ index aa49e70..9af5000 100644
         setDynFlags dflags1
         liftIO $ checkProcessArgsResult dflags1 unhandled_flags
  
-@@ -873,7 +890,7 @@ runPhase (RealPhase (Cpp sf)) input_fn dflags0
+@@ -873,7 +891,7 @@ runPhase (RealPhase (Cpp sf)) input_fn dflags0
              -- See #2464,#3457
              src_opts <- liftIO $ getOptionsFromFile dflags0 output_fn
              (dflags2, unhandled_flags, warns)
@@ -358,7 +362,7 @@ index aa49e70..9af5000 100644
              liftIO $ checkProcessArgsResult dflags2 unhandled_flags
              unless (gopt Opt_Pp dflags2) $
                  liftIO $ handleFlagWarnings dflags2 warns
-@@ -906,7 +923,7 @@ runPhase (RealPhase (HsPp sf)) input_fn dflags
+@@ -906,7 +924,7 @@ runPhase (RealPhase (HsPp sf)) input_fn dflags
              -- re-read pragmas now that we've parsed the file (see #3674)
              src_opts <- liftIO $ getOptionsFromFile dflags output_fn
              (dflags1, unhandled_flags, warns)
@@ -367,7 +371,24 @@ index aa49e70..9af5000 100644
              setDynFlags dflags1
              liftIO $ checkProcessArgsResult dflags1 unhandled_flags
              liftIO $ handleFlagWarnings dflags1 warns
-@@ -2153,3 +2170,12 @@ haveRtsOptsFlags dflags =
+@@ -1767,8 +1785,15 @@ getHCFilePackages filename =
+ -- read any interface files), so the user must explicitly specify all
+ -- the packages.
+ 
++data LinkBinaryHook = LinkBinaryHook deriving Typeable
++type instance Hook LinkBinaryHook = DynFlags -> [FilePath] -> [PackageId] -> IO ()
++
+ linkBinary :: DynFlags -> [FilePath] -> [PackageId] -> IO ()
+-linkBinary dflags o_files dep_packages = do
++linkBinary dflags =
++  fromMaybe linkBinary' (lookupHook LinkBinaryHook $ hooks dflags) dflags
++
++linkBinary' :: DynFlags -> [FilePath] -> [PackageId] -> IO ()
++linkBinary' dflags o_files dep_packages = do
+     let platform = targetPlatform dflags
+         mySettings = settings dflags
+         verbFlags = getVerbFlags dflags
+@@ -2154,3 +2179,12 @@ haveRtsOptsFlags dflags =
           isJust (rtsOpts dflags) || case rtsOptsEnabled dflags of
                                          RtsOptsSafeOnly -> False
                                          _ -> True
@@ -761,6 +782,81 @@ index cc8dfe3..87ae5e4 100644
    where
          ways0 = ways dflags
  
+diff --git a/compiler/main/SysTools.lhs b/compiler/main/SysTools.lhs
+index d43826a..6e1465c 100644
+--- a/compiler/main/SysTools.lhs
++++ b/compiler/main/SysTools.lhs
+@@ -7,6 +7,7 @@
+ -----------------------------------------------------------------------------
+ 
+ \begin{code}
++{-# LANGUAGE TypeFamilies #-}
+ module SysTools (
+         -- Initialisation
+         initSysTools,
+@@ -40,8 +41,10 @@ module SysTools (
+         cleanTempDirs, cleanTempFiles, cleanTempFilesExcept,
+         addFilesToClean,
+ 
+-        Option(..)
++        Option(..),
+ 
++        -- Hook for custom dynLib linking
++        LinkDynLibHook(..), linkDynLib'
+  ) where
+ 
+ #include "HsVersions.h"
+@@ -57,6 +60,7 @@ import Platform
+ import Util
+ import DynFlags
+ import Exception
++import Hooks
+ 
+ import Data.IORef
+ import Control.Monad
+@@ -68,6 +72,8 @@ import System.IO.Error as IO
+ import System.Directory
+ import Data.Char
+ import Data.List
++import Data.Maybe (fromMaybe)
++import Data.Typeable
+ import qualified Data.Map as Map
+ import Text.ParserCombinators.ReadP hiding (char)
+ import qualified Text.ParserCombinators.ReadP as R
+@@ -211,6 +217,7 @@ initSysTools mbMinusB
+                                    Just "NO" -> return False
+                                    Just xs -> pgmError ("Bad value for " ++ show key ++ ": " ++ show xs)
+                                    Nothing -> pgmError ("No entry for " ++ show key ++ " in " ++ show settingsFile)
++           readSetting :: (Monad m, Read a) => String -> m a
+            readSetting key = case lookup key mySettings of
+                              Just xs ->
+                                  case maybeRead xs of
+@@ -971,6 +978,7 @@ handleProc pgm phase_name proc = do
+           then does_not_exist
+           else IO.ioError err
+ 
++    does_not_exist :: IO a
+     does_not_exist = throwGhcExceptionIO (InstallationError ("could not execute: " ++ pgm))
+ 
+ 
+@@ -1174,8 +1182,16 @@ linesPlatform xs =
+ 
+ #endif
+ 
++data LinkDynLibHook = LinkDynLibHook deriving Typeable
++type instance Hook LinkDynLibHook =
++  DynFlags -> [String] -> [PackageId] -> IO ()
++
+ linkDynLib :: DynFlags -> [String] -> [PackageId] -> IO ()
+-linkDynLib dflags0 o_files dep_packages
++linkDynLib dflags =
++  fromMaybe linkDynLib' (lookupHook LinkDynLibHook $ hooks dflags) dflags
++
++linkDynLib' :: DynFlags -> [String] -> [PackageId] -> IO ()
++linkDynLib' dflags0 o_files dep_packages
+  = do
+     let -- This is a rather ugly hack to fix dynamically linked
+         -- GHC on Windows. If GHC is linked with -threaded, then
 diff --git a/compiler/nativeGen/AsmCodeGen.lhs b/compiler/nativeGen/AsmCodeGen.lhs
 index a999f8f..42eeb4f 100644
 --- a/compiler/nativeGen/AsmCodeGen.lhs
@@ -999,7 +1095,7 @@ index b53ae7c..5072908 100644
  instance Binary CType where
      put_ bh (CType mh fs) = do put_ bh mh
 diff --git a/compiler/prelude/PrelNames.lhs b/compiler/prelude/PrelNames.lhs
-index 8452092..f6b5ef3 100644
+index 3e5384b..551a226 100644
 --- a/compiler/prelude/PrelNames.lhs
 +++ b/compiler/prelude/PrelNames.lhs
 @@ -250,6 +250,7 @@ basicKnownKeyNames
@@ -1010,7 +1106,7 @@ index 8452092..f6b5ef3 100644
  
          -- Others
          otherwiseIdName, inlineIdName,
-@@ -361,7 +362,7 @@ gHC_PRIM, gHC_TYPES, gHC_GENERICS,
+@@ -360,7 +361,7 @@ gHC_PRIM, gHC_PRIMWRAPPERS, gHC_TYPES, gHC_GENERICS, gHC_MAGIC,
      tYPEABLE, tYPEABLE_INTERNAL, oLDTYPEABLE, oLDTYPEABLE_INTERNAL, gENERICS,
      dOTNET, rEAD_PREC, lEX, gHC_INT, gHC_WORD, mONAD, mONAD_FIX, mONAD_ZIP,
      aRROW, cONTROL_APPLICATIVE, gHC_DESUGAR, rANDOM, gHC_EXTS,
@@ -1018,7 +1114,7 @@ index 8452092..f6b5ef3 100644
 +    cONTROL_EXCEPTION_BASE, gHC_TYPELITS, gHC_IP, gHCJS_PRIM :: Module
  
  gHC_PRIM        = mkPrimModule (fsLit "GHC.Prim")   -- Primitive types and values
- gHC_TYPES       = mkPrimModule (fsLit "GHC.Types")
+ gHC_PRIMWRAPPERS = mkPrimModule (fsLit "GHC.PrimWrappers")
 @@ -419,6 +420,7 @@ cONTROL_EXCEPTION_BASE = mkBaseModule (fsLit "Control.Exception.Base")
  gHC_GENERICS    = mkBaseModule (fsLit "GHC.Generics")
  gHC_TYPELITS    = mkBaseModule (fsLit "GHC.TypeLits")
@@ -1037,7 +1133,7 @@ index 8452092..f6b5ef3 100644
  mkThisGhcModule :: FastString -> Module
  mkThisGhcModule m = mkModule thisGhcPackageId (mkModuleNameFS m)
  
-@@ -1131,7 +1136,9 @@ typeNatExpTyFamName = tcQual  gHC_TYPELITS (fsLit "^")   typeNatExpTyFamNameKey
+@@ -1132,7 +1137,9 @@ typeNatExpTyFamName = tcQual  gHC_TYPELITS (fsLit "^")   typeNatExpTyFamNameKey
  ipClassName :: Name
  ipClassName         = clsQual gHC_IP (fsLit "IP")      ipClassNameKey
  
@@ -1048,7 +1144,7 @@ index 8452092..f6b5ef3 100644
  
  -- dotnet interop
  objectTyConName :: Name
-@@ -1362,6 +1369,9 @@ ptrTyConKey                             = mkPreludeTyConUnique 74
+@@ -1363,6 +1370,9 @@ ptrTyConKey                             = mkPreludeTyConUnique 74
  funPtrTyConKey                          = mkPreludeTyConUnique 75
  tVarPrimTyConKey                        = mkPreludeTyConUnique 76
  
@@ -1224,10 +1320,10 @@ index 62e167a..7a55bbd 100644
         ; case mb_name of {
              Nothing ->
 diff --git a/compiler/typecheck/TcForeign.lhs b/compiler/typecheck/TcForeign.lhs
-index 9914f94..495b751 100644
+index 9914f94..7635449 100644
 --- a/compiler/typecheck/TcForeign.lhs
 +++ b/compiler/typecheck/TcForeign.lhs
-@@ -12,10 +12,16 @@ is restricted to what the outside world understands (read C), and this
+@@ -12,10 +12,23 @@ is restricted to what the outside world understands (read C), and this
  module checks to see if a foreign declaration has got a legal type.
  
  \begin{code}
@@ -1236,15 +1332,22 @@ index 9914f94..495b751 100644
  module TcForeign
          (
            tcForeignImports
-+        , tcForeignImports'
-+        , TcForeignImportsHook (..)
          , tcForeignExports
-+        , tcForeignExports'
++
++        -- Hooks to override default types
++        , TcForeignImportsHook (..)
++        , tcForeignImports'
++        , tcCheckFIType, checkCTarget, checkForeignArgs, checkForeignRes
++        , normaliseFfiType
++        , nonIOok, mustBeIO
++        , checkSafe, noCheckSafe
 +        , TcForeignExportsHook (..)
++        , tcForeignExports'
++        , tcCheckFEType
          ) where
  
  #include "HsVersions.h"
-@@ -29,7 +35,7 @@ import TcEnv
+@@ -29,7 +42,7 @@ import TcEnv
  
  import FamInst
  import FamInstEnv
@@ -1253,7 +1356,7 @@ index 9914f94..495b751 100644
  import Type
  import TypeRep
  import ForeignCall
-@@ -47,8 +53,10 @@ import Platform
+@@ -47,8 +60,10 @@ import Platform
  import SrcLoc
  import Bag
  import FastString
@@ -1264,7 +1367,7 @@ index 9914f94..495b751 100644
  \end{code}
  
  \begin{code}
-@@ -191,10 +199,18 @@ to the module's usages.
+@@ -191,10 +206,18 @@ to the module's usages.
  %************************************************************************
  
  \begin{code}
@@ -1284,7 +1387,7 @@ index 9914f94..495b751 100644
    = do { (ids, decls, gres) <- mapAndUnzip3M tcFImport $
                                 filter isForeignImport decls
         ; return (ids, decls, unionManyBags gres) }
-@@ -282,7 +298,7 @@ tcCheckFIType sig_ty arg_tys res_ty idecl@(CImport cconv safety mh (CFunction ta
+@@ -282,7 +305,7 @@ tcCheckFIType sig_ty arg_tys res_ty idecl@(CImport cconv safety mh (CFunction ta
    | otherwise = do              -- Normal foreign import
        checkCg checkCOrAsmOrLlvmOrInterp
        cconv' <- checkCConv cconv
@@ -1293,7 +1396,7 @@ index 9914f94..495b751 100644
        dflags <- getDynFlags
        checkForeignArgs (isFFIArgumentTy dflags safety) arg_tys
        checkForeignRes nonIOok checkSafe (isFFIImportResultTy dflags) res_ty
-@@ -321,11 +337,20 @@ checkMissingAmpersand dflags arg_tys res_ty
+@@ -321,11 +344,20 @@ checkMissingAmpersand dflags arg_tys res_ty
  %************************************************************************
  
  \begin{code}
@@ -1315,7 +1418,7 @@ index 9914f94..495b751 100644
    = foldlM combine (emptyLHsBinds, [], emptyBag) (filter isForeignExport decls)
    where
     combine (binds, fs, gres1) (L loc fe) = do
-@@ -362,8 +387,9 @@ tcFExport d = pprPanic "tcFExport" (ppr d)
+@@ -362,8 +394,9 @@ tcFExport d = pprPanic "tcFExport" (ppr d)
  \begin{code}
  tcCheckFEType :: Type -> ForeignExport -> TcM ForeignExport
  tcCheckFEType sig_ty (CExport (CExportStatic str cconv)) = do
@@ -1327,7 +1430,7 @@ index 9914f94..495b751 100644
      cconv' <- checkCConv cconv
      checkForeignArgs isFFIExternalTy arg_tys
      checkForeignRes nonIOok noCheckSafe isFFIExportResultTy res_ty
-@@ -481,6 +507,11 @@ checkCConv StdCallConv  = do dflags <- getDynFlags
+@@ -481,6 +514,11 @@ checkCConv StdCallConv  = do dflags <- getDynFlags
                                           return CCallConv
  checkCConv PrimCallConv = do addErrTc (text "The `prim' calling convention can only be used with `foreign import'")
                               return PrimCallConv

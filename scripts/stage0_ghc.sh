@@ -28,8 +28,8 @@ echo "====================================" &&
 
 cd ghc-source &&
 patch -p1 < /home/vagrant/ghcjs-build-refs/patches/ghc-ghcjs.patch &&
-echo 'BuildFlavour = quick' > mk/build.mk &&
-cat mk/build.mk.sample >> mk/build.mk &&
+# echo 'BuildFlavour = quick' > mk/build.mk &&
+# cat mk/build.mk.sample >> mk/build.mk &&
 # echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk 
 
 echo "====================================" &&

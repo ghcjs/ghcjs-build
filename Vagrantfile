@@ -1,5 +1,8 @@
-# -*- mode: ruby -*-
+# -*- mode: ruby -*-:
 # vi: set ft=ruby :
+
+# build a 64 bit vm? (required for travis)
+sixtyfour = false 
 
 Vagrant.configure("2") do |config|
   # All Vagrant configuration is done here. The most common configuration
@@ -7,7 +10,11 @@ Vagrant.configure("2") do |config|
   # please see the online documentation at vagrantup.com.
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "precise32"
+  if sixtyfour
+    config.vm.box = "precise64"
+  else
+    config.vm.box = "precise32"
+  end
 
   config.vm.provider "virtualbox" do |v|
     v.customize ["modifyvm", :id, "--cpus", 4, "--memory", 3700, "--ioapic", "on"]
@@ -15,8 +22,11 @@ Vagrant.configure("2") do |config|
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.
-  config.vm.box_url = "http://files.vagrantup.com/precise32.box"
-
+  if sixtyfour
+    config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+  else
+    config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+  end
   # Share an additional folder to the guest VM. The first argument is
   # an identifier, the second is the path on the guest to mount the
   # folder, and the third is the path on the host to the actual folder.

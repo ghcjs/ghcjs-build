@@ -26,7 +26,10 @@ file { "/home/vagrant/jsshell":
   group => vagrant
 }
 
-$jsshellArch = "i686"
+$jsshellArch = $architecture ? {
+  /64/    => "x86_64",
+  default => "i686",
+}
 
 exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-${jsshellArch}.zip":
   creates => "/home/vagrant/jsshell-linux-${jsshellArch}.zip",
@@ -47,7 +50,11 @@ exec { "unzip /home/vagrant/jsshell-linux-${jsshellArch}.zip -d jsshell":
 }
 
 $nodeVersion = "v0.10.16"
-$nodeArch    = "x86"
+
+$nodeArch = $architecture ? { 
+  /64/    => "x64",
+  default => "x86",
+}
 
 exec { "wget http://nodejs.org/dist/${nodeVersion}/node-${nodeVersion}-linux-${nodeArch}.tar.gz":
   creates => "/home/vagrant/node-${nodeVersion}-linux-${nodeArch}.tar.gz",

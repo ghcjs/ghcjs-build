@@ -26,8 +26,10 @@ file { "/home/vagrant/jsshell":
   group => vagrant
 }
 
-exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-i686.zip":
-  creates => "/home/vagrant/jsshell-linux-i686.zip",
+$jsshellArch = "i686"
+
+exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/jsshell-linux-${jsshellArch}.zip":
+  creates => "/home/vagrant/jsshell-linux-${jsshellArch}.zip",
   cwd => "/home/vagrant",
   path => ["/usr/bin"],
   require => File["/home/vagrant/jsshell"],
@@ -35,7 +37,7 @@ exec { "wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk
   group => vagrant
 }
 ->
-exec { "unzip /home/vagrant/jsshell-linux-i686.zip -d jsshell":
+exec { "unzip /home/vagrant/jsshell-linux-${jsshellArch}.zip -d jsshell":
   cwd => "/home/vagrant",
   creates => "/home/vagrant/jsshell/js",
   path => ["/usr/bin"],
@@ -44,8 +46,11 @@ exec { "unzip /home/vagrant/jsshell-linux-i686.zip -d jsshell":
   require => Package['unzip']
 }
 
-exec { "wget http://nodejs.org/dist/v0.10.15/node-v0.10.15-linux-x86.tar.gz":
-  creates => "/home/vagrant/node-v0.10.15-linux-x86.tar.gz",
+$nodeVersion = "v0.10.16"
+$nodeArch    = "x86"
+
+exec { "wget http://nodejs.org/dist/${nodeVersion}/node-${nodeVersion}-linux-${nodeArch}.tar.gz":
+  creates => "/home/vagrant/node-${nodeVersion}-linux-${nodeArch}.tar.gz",
   cwd => "/home/vagrant",
   path => ["/usr/bin"],
   user => vagrant,
@@ -53,8 +58,8 @@ exec { "wget http://nodejs.org/dist/v0.10.15/node-v0.10.15-linux-x86.tar.gz":
 #  require => [Package['wget']]
 }
 ->
-exec { "tar -xzf node-v0.10.15-linux-x86.tar.gz":
-  creates => "/home/vagrant/node-v0.10.15-linux-x86/bin/node",
+exec { "tar -xzf node-${nodeVersion}-linux-${nodeArch}.tar.gz":
+  creates => "/home/vagrant/node-${nodeVersion}-linux-${nodeArch}/bin/node",
   cwd => "/home/vagrant",
   path => ["/bin"],
   user => vagrant,
@@ -63,8 +68,8 @@ exec { "tar -xzf node-v0.10.15-linux-x86.tar.gz":
 ~>
 file { "/home/vagrant/node":
   ensure  => link,
-  target  => "/home/vagrant/node-v0.10.15-linux-x86",
-#  require => File['/home/vagrant/node-v0.10.15-linux-x86/bin/node']
+  target  => "/home/vagrant/node-${nodeVersion}-linux-${nodeArch}",
+#  require => File['/home/vagrant/node-${nodeVersion}-linux-${nodeArch}/bin/node']
 }
 
 file { "/home/vagrant/pkg":
@@ -203,25 +208,3 @@ exec { 'build3':
              , Package['ghc']],
   subscribe => [ Exec['build2'] ]
 }
-
-
-# exec { 'installghc':
-#   command => './configure --prefix=/usr/local && make install',
-#   provider => 'shell',
-#   cwd => '/usr/src/ghc-7.6.3',
-#   creates => '/usr/local/bin/ghc',
-#   subscribe => Exec['unpackghc'],
-#   require => [Package['ghc'], Package['cabal-install'], File['/usr/lib/libgmp.so.3']]
-# }
-# exec { 'build':
-#   provider => 'shell',
-#   timeout => 100000,
-#   command => "/vagrant/bootstrap.sh",
-#   path => "/home/vagrant/ghcjs/bin:/home/vagrant/.cabal/bin:/home/vagrant/ghc/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-#   creates => '/home/vagrant/ghc/bin/ghc',
-#   subscribe => [Vcsrepo['/home/vagrant/ghc-source'], File['/home/vagrant/ghc-source/dobuild.sh']],
-#   user => vagrant,
-#   require => [Package['cabal-install'], Package['ghc'],
-#               Vcsrepo['/home/vagrant/ghc-source'], File['/home/vagrant/ghc-source/dobuild.sh'], Package['happy'], Package['autoconf'],
-#               Package['libtool'], Package['alex'], Package['libbz2-dev'], Package['darcs'], Package['libncurses5-dev']]
-# }

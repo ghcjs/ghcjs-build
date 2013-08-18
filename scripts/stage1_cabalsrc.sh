@@ -35,7 +35,7 @@ install_src_pkg 'time' '1.4.0.2.1' &&
 install_src_pkg 'HTTP' '4000.2.6.0.1' &&
 install_src_pkg 'entropy' '0.2.2.2' &&
 install_src_pkg 'Tensor' '1.0.0.1.1' &&
-install_src_pkg 'jmacro' '0.7.0' &&
+install_src_pkg 'jmacro' '0.7.0.1' &&
 install_src_pkg 'generic-deriving' '1.5.0.0.1' &&
 install_src_pkg 'crypto-api' '0.12.2.1.2' &&
 install_src_pkg 'primitive' '0.5.0.1.1' &&

@@ -1,0 +1,6 @@
+vagrant/.ssh
+vagrant/.bash_history
+vagrant/ghcjs-build-refs
+vagrant/node-v*.tar.gz
+vagrant/jsshell-*.zip
+

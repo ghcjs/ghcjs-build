@@ -3,4 +3,5 @@ vagrant/.bash_history
 vagrant/ghcjs-build-refs
 vagrant/node-v*.tar.gz
 vagrant/jsshell-*.zip
+vagrant/ghcjs-build-refs/ghc-packages/libraries/hoopl/paper/dom.eps
 

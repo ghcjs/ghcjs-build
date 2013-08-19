@@ -10,46 +10,24 @@ echo "===================================="
 cd ghcjs &&
 cabal install -j4 --enable-executable-dynamic &&
 
+# required for testsuite
+cabal install stm QuickCheck &&
+
 cd ../ghcjs-boot &&
 ghcjs-boot --init &&
-cd libraries/bytestring &&
-cabal install --ghcjs &&
-cd ../unix &&
-cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
-cd ../directory &&
-cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
-cd ../process &&
-cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
-cd ../../.. &&
+
+cd &&
 
 cp -rf ghcjs-build-refs/shims .ghcjs/*-linux-*/ &&
 
-echo "== Installing ghcjs-prim" &&
-cd ghcjs-prim &&
-cabal install --ghcjs &&
-cd .. &&
-
-echo "== Installing ghcjs-base" &&
-cd ghcjs-base &&
-cabal install --ghcjs &&
-cd .. &&
-
-echo "== Installing ghcjs-dom" &&
-cd ghcjs-dom &&
-cabal install --ghcjs &&
-cd .. &&
-
-echo "== Installing ghcjs-jquery" &&
-cd ghcjs-jquery &&
-cabal install --ghcjs &&
-cd .. &&
-
-# cabal unpack regex-posix-0.95.2 &&
-# cd regex-posix-0.95.2 &&
-# cabal configure --constraint='bytestring>=0.10.3.0' &&
-# cabal build &&
-# cabal install --ghcjs --constraint='bytestring>=0.10.3.0' &&
-# cd .. &&
+cabal install --ghcjs ./ghcjs-boot/libraries/bytestring \
+                      ./ghcjs-boot/libraries/unix \
+                      ./ghcjs-boot/libraries/directory \
+                      ./ghcjs-boot/libraries/process \
+                      ./ghcjs-prim \
+                      ./ghcjs-base \
+                      ./ghcjs-dom \
+                      ./ghcjs-jquery &&
 
 echo "====================================" &&
 echo " Installing examples" &&
@@ -63,8 +41,6 @@ cd ../.. &&
 cabal install warp-static &&
 
 cd &&
-# chown -R vagrant . &&
-# chgrp -R vagrant . &&
 
 touch /home/vagrant/build3 &&
 

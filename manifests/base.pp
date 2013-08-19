@@ -20,4 +20,3 @@ package { 'freeglut3-dev': ensure => present }
 package { 'unzip': ensure => present }
 Vcsrepo { require => Package[git] }
 Exec["apt-update"] -> Package <| |>
-

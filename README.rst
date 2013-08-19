@@ -1,18 +1,23 @@
 ======
-A Vagrant setup to build ghcjs
+Vagrant image for prebuilt GHCJS
 ======
 
-Make sure you pull down all the submodules (including the submodules of submodules).
-If in doubt run this::
+This image downloads binaries for GHC HEAD and GHCJS to get you up and
+running quickly for GHCJS development
 
-  git submodule update --init --recursive
+Run the command::
 
-Then everything should build if you do a 'vagrant up', but note that it takes many
-hours because of the time to build ghcjs-ghc.
+   vagrant up
+
+to get started. This will download a large (approximately 500MB) archive
+and install it.
 
 When it is complete, type::
 
   vagrant ssh
+
+to log into the virtual machine. If you want to upgrade to a later
+build on an existing VM, use 'vagrant provision'.
 
 You are now ready to build ghcjs programs.
 
@@ -33,19 +38,3 @@ Then open http://localhost:3030/ in your host machines web
 browser.
 
 
-Updating the versions of GHC, Cabal and GHCJS used
-====
-
-By default ghcjs-build submodules point versions we have tested.
-But if you want to try out the latest and greatest you can update
-to the latest ghc head before running vagrant up with::
-
-  scripts/update_ghc.sh
-
-You can update the cabal submodule with::
-
-  scripts/update_cabal.sh
-
-And you can update the ghcjs submodules with::
-
-  scripts/update_ghcjs.sh

@@ -1,32 +1,22 @@
 # -*- mode: ruby -*-:
 # vi: set ft=ruby :
 
-# build a 64 bit vm? (required for travis)
-sixtyfour = false 
-
 Vagrant.configure("2") do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
 
   # Every Vagrant virtual environment requires a box to build off of.
-  if sixtyfour
-    config.vm.box = "precise64"
-  else
-    config.vm.box = "precise32"
-  end
+  config.vm.box = "precise32"
 
   config.vm.provider "virtualbox" do |v|
-    v.customize ["modifyvm", :id, "--cpus", 4, "--memory", 3700, "--ioapic", "on"]
+    v.customize ["modifyvm", :id, "--cpus", 4, "--memory", 1500, "--ioapic", "on"]
   end
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.
-  if sixtyfour
-    config.vm.box_url = "http://files.vagrantup.com/precise64.box"
-  else
-    config.vm.box_url = "http://files.vagrantup.com/precise32.box"
-  end
+  config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+
   # Share an additional folder to the guest VM. The first argument is
   # an identifier, the second is the path on the guest to mount the
   # folder, and the third is the path on the host to the actual folder.
@@ -55,6 +45,7 @@ Vagrant.configure("2") do |config|
   # #               Managed by Puppet.\n"
   # # }
   #
+
   config.vm.provision :puppet do |puppet|
     puppet.manifests_path = "manifests"
     puppet.manifest_file  = "base.pp"
@@ -62,7 +53,9 @@ Vagrant.configure("2") do |config|
     puppet.options = "--verbose"
   end
 
-  config.vm.network :forwarded_port, guest: 3000, host: 3030
+  config.vm.provision :shell, :path => "scripts/prebuilt.sh"
+
+  config.vm.network :forwarded_port, guest: 3000, host: 3031
 
   
 end

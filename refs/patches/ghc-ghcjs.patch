@@ -1,32 +1,3 @@
-diff --git a/compiler/basicTypes/Module.lhs b/compiler/basicTypes/Module.lhs
-index 27d3c52..e21028d 100644
---- a/compiler/basicTypes/Module.lhs
-+++ b/compiler/basicTypes/Module.lhs
-@@ -41,6 +41,7 @@ module Module
-         dphParPackageId,
-         mainPackageId,
-         thisGhcPackageId,
-+        ghcjsPrimPackageId,
- 
-         -- * The Module type
-         Module,
-@@ -359,7 +360,7 @@ packageIdString = unpackFS . packageIdFS
- integerPackageId, primPackageId,
-   basePackageId, rtsPackageId,
-   thPackageId, dphSeqPackageId, dphParPackageId,
--  mainPackageId, thisGhcPackageId  :: PackageId
-+  mainPackageId, thisGhcPackageId, ghcjsPrimPackageId :: PackageId
- primPackageId      = fsToPackageId (fsLit "ghc-prim")
- integerPackageId   = fsToPackageId (fsLit cIntegerLibrary)
- basePackageId      = fsToPackageId (fsLit "base")
-@@ -368,6 +369,7 @@ thPackageId        = fsToPackageId (fsLit "template-haskell")
- dphSeqPackageId    = fsToPackageId (fsLit "dph-seq")
- dphParPackageId    = fsToPackageId (fsLit "dph-par")
- thisGhcPackageId   = fsToPackageId (fsLit ("ghc-" ++ cProjectVersion))
-+ghcjsPrimPackageId = fsToPackageId (fsLit "ghcjs-prim")
- 
- -- | This is the package Id for the current program.  It is the default
- -- package Id if you don't specify a package name.  We don't add this prefix
 diff --git a/compiler/cmm/PprC.hs b/compiler/cmm/PprC.hs
 index b0c9bd3..149968d 100644
 --- a/compiler/cmm/PprC.hs
@@ -266,7 +237,7 @@ index 6f898fa..def9e2b 100644
              PrimTarget   _ -> CC_Ccc
  
 diff --git a/compiler/main/DriverPipeline.hs b/compiler/main/DriverPipeline.hs
-index c5bcdc7..5f9e6db 100644
+index c5bcdc7..45e674b 100644
 --- a/compiler/main/DriverPipeline.hs
 +++ b/compiler/main/DriverPipeline.hs
 @@ -1,5 +1,5 @@
@@ -290,6 +261,15 @@ index c5bcdc7..5f9e6db 100644
    ) where
  
  #include "HsVersions.h"
+@@ -31,7 +38,7 @@ import Packages
+ import HeaderInfo
+ import DriverPhases
+ import SysTools
+-import HscMain
++import HscMain hiding ( Hsc )
+ import Finder
+ import HscTypes
+ import Outputable
 @@ -52,6 +59,8 @@ import LlvmCodeGen      ( llvmFixupAsm )
  import MonadUtils
  import Platform
@@ -717,8 +697,57 @@ index e69de29..206a0bf 100644
 +
 +\end{code}
 +
+diff --git a/compiler/main/HscMain.hs b/compiler/main/HscMain.hs
+index e884fe5..fd63db4 100644
+--- a/compiler/main/HscMain.hs
++++ b/compiler/main/HscMain.hs
+@@ -25,6 +25,7 @@
+ -- (c) The GRASP/AQUA Project, Glasgow University, 1993-2000
+ --
+ -------------------------------------------------------------------------------
++{-# LANGUAGE TypeFamilies #-}
+ 
+ module HscMain
+     (
+@@ -71,6 +72,7 @@ module HscMain
+     , hscTcExpr, hscImport, hscKcType
+     , hscCompileCoreExpr
+ #endif
++    , Hsc(..), HscFrontendHook(..)
+     ) where
+ 
+ #ifdef GHCI
+@@ -129,6 +131,7 @@ import NameSet          ( emptyNameSet )
+ import InstEnv
+ import FamInstEnv
+ import Fingerprint      ( Fingerprint )
++import Hooks
+ 
+ import DynFlags
+ import ErrUtils
+@@ -153,6 +156,7 @@ import Data.Maybe
+ import Data.IORef
+ import System.FilePath as FilePath
+ import System.Directory
++import Data.Typeable (Typeable)
+ 
+ #include "HsVersions.h"
+ 
+@@ -608,7 +612,11 @@ genericHscFrontend mod_summary
+     | ExtCoreFile <- ms_hsc_src mod_summary =
+         panic "GHC does not currently support reading External Core files"
+     | otherwise = do
+-        hscFileFrontEnd mod_summary
++        gbl_env <- hscFileFrontEnd mod_summary
++        getHooked HscFrontendHook return >>= ($gbl_env)
++
++data HscFrontendHook = HscFrontendHook deriving Typeable
++type instance Hook HscFrontendHook = TcGblEnv -> Hsc TcGblEnv
+ 
+ --------------------------------------------------------------
+ -- Compilers
 diff --git a/compiler/main/Packages.lhs b/compiler/main/Packages.lhs
-index cc8dfe3..87ae5e4 100644
+index cc8dfe3..0cfd306 100644
 --- a/compiler/main/Packages.lhs
 +++ b/compiler/main/Packages.lhs
 @@ -2,6 +2,7 @@
@@ -753,17 +782,7 @@ index cc8dfe3..87ae5e4 100644
  import qualified Data.Map as Map
  import qualified FiniteMap as Map
  import qualified Data.Set as Set
-@@ -480,7 +484,8 @@ findWiredInPackages dflags pkgs = do
-                             rtsPackageId,
-                             thPackageId,
-                             dphSeqPackageId,
--                            dphParPackageId ]
-+                            dphParPackageId,
-+                            ghcjsPrimPackageId ]
- 
-         matches :: PackageConfig -> String -> Bool
-         pc `matches` pid = display (pkgName (sourcePackageId pc)) == pid
-@@ -878,8 +883,17 @@ collectLinkOpts dflags ps = concat (map all_opts ps)
+@@ -878,8 +882,17 @@ collectLinkOpts dflags ps = concat (map all_opts ps)
          libs p     = packageHsLibs dflags p ++ extraLibraries p
          all_opts p = map ("-l" ++) (libs p) ++ ldOptions p
  
@@ -1094,66 +1113,6 @@ index b53ae7c..5072908 100644
  
  instance Binary CType where
      put_ bh (CType mh fs) = do put_ bh mh
-diff --git a/compiler/prelude/PrelNames.lhs b/compiler/prelude/PrelNames.lhs
-index 3e5384b..551a226 100644
---- a/compiler/prelude/PrelNames.lhs
-+++ b/compiler/prelude/PrelNames.lhs
-@@ -250,6 +250,7 @@ basicKnownKeyNames
-         stablePtrTyConName, ptrTyConName, funPtrTyConName,
-         int8TyConName, int16TyConName, int32TyConName, int64TyConName,
-         wordTyConName, word8TyConName, word16TyConName, word32TyConName, word64TyConName,
-+        jsrefTyConName,
- 
-         -- Others
-         otherwiseIdName, inlineIdName,
-@@ -360,7 +361,7 @@ gHC_PRIM, gHC_PRIMWRAPPERS, gHC_TYPES, gHC_GENERICS, gHC_MAGIC,
-     tYPEABLE, tYPEABLE_INTERNAL, oLDTYPEABLE, oLDTYPEABLE_INTERNAL, gENERICS,
-     dOTNET, rEAD_PREC, lEX, gHC_INT, gHC_WORD, mONAD, mONAD_FIX, mONAD_ZIP,
-     aRROW, cONTROL_APPLICATIVE, gHC_DESUGAR, rANDOM, gHC_EXTS,
--    cONTROL_EXCEPTION_BASE, gHC_TYPELITS, gHC_IP :: Module
-+    cONTROL_EXCEPTION_BASE, gHC_TYPELITS, gHC_IP, gHCJS_PRIM :: Module
- 
- gHC_PRIM        = mkPrimModule (fsLit "GHC.Prim")   -- Primitive types and values
- gHC_PRIMWRAPPERS = mkPrimModule (fsLit "GHC.PrimWrappers")
-@@ -419,6 +420,7 @@ cONTROL_EXCEPTION_BASE = mkBaseModule (fsLit "Control.Exception.Base")
- gHC_GENERICS    = mkBaseModule (fsLit "GHC.Generics")
- gHC_TYPELITS    = mkBaseModule (fsLit "GHC.TypeLits")
- gHC_IP          = mkBaseModule (fsLit "GHC.IP")
-+gHCJS_PRIM      = mkGhcjsPrimModule (fsLit "GHCJS.Prim")
- 
- gHC_PARR' :: Module
- gHC_PARR' = mkBaseModule (fsLit "GHC.PArr")
-@@ -454,6 +456,9 @@ mkBaseModule m = mkModule basePackageId (mkModuleNameFS m)
- mkBaseModule_ :: ModuleName -> Module
- mkBaseModule_ m = mkModule basePackageId m
- 
-+mkGhcjsPrimModule :: FastString -> Module
-+mkGhcjsPrimModule m = mkModule ghcjsPrimPackageId (mkModuleNameFS m)
-+
- mkThisGhcModule :: FastString -> Module
- mkThisGhcModule m = mkModule thisGhcPackageId (mkModuleNameFS m)
- 
-@@ -1132,7 +1137,9 @@ typeNatExpTyFamName = tcQual  gHC_TYPELITS (fsLit "^")   typeNatExpTyFamNameKey
- ipClassName :: Name
- ipClassName         = clsQual gHC_IP (fsLit "IP")      ipClassNameKey
- 
--
-+-- GHCJS JavaScript reference
-+jsrefTyConName :: Name
-+jsrefTyConName      = tcQual  gHCJS_PRIM (fsLit "JSRef") jsrefTyConKey
- 
- -- dotnet interop
- objectTyConName :: Name
-@@ -1363,6 +1370,9 @@ ptrTyConKey                             = mkPreludeTyConUnique 74
- funPtrTyConKey                          = mkPreludeTyConUnique 75
- tVarPrimTyConKey                        = mkPreludeTyConUnique 76
- 
-+-- GHCJS JavaScript reference
-+jsrefTyConKey :: Unique                 = mkPreludeTyConUnique 77
-+
- -- Parallel array type constructor
- parrTyConKey :: Unique
- parrTyConKey                            = mkPreludeTyConUnique 82
 diff --git a/compiler/simplCore/CoreMonad.lhs b/compiler/simplCore/CoreMonad.lhs
 index 31547e1..5c57fef 100644
 --- a/compiler/simplCore/CoreMonad.lhs
@@ -1442,22 +1401,71 @@ index 9914f94..7635449 100644
  \end{code}
  
  Warnings
-diff --git a/compiler/typecheck/TcType.lhs b/compiler/typecheck/TcType.lhs
-index 8a8de41..de2f7e1 100644
---- a/compiler/typecheck/TcType.lhs
-+++ b/compiler/typecheck/TcType.lhs
-@@ -1523,8 +1523,9 @@ marshalableTyCon dflags tc
-       && isUnLiftedTyCon tc
-       && not (isUnboxedTupleTyCon tc)
-       && case tyConPrimRep tc of	-- Note [Marshalling VoidRep]
--	   VoidRep -> False
--	   _       -> True)
-+           VoidRep -> False
-+           _       -> True)
-+  || xopt Opt_JavaScriptFFI dflags && getUnique tc == jsrefTyConKey
-   || boxedMarshalableTyCon tc
+diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
+index 2528e69..c79c6c5 100644
+--- a/compiler/typecheck/TcSplice.lhs
++++ b/compiler/typecheck/TcSplice.lhs
+@@ -8,11 +8,14 @@ TcSplice: Template Haskell splices
  
- boxedMarshalableTyCon :: TyCon -> Bool
+ \begin{code}
+ {-# OPTIONS_GHC -fno-warn-orphans #-}
++{-# LANGUAGE TypeFamilies #-}
+ module TcSplice( tcSpliceType, tcSpliceExpr, tcSpliceDecls, tcBracket,
+                  lookupThName_maybe,
+                  runQuasiQuoteExpr, runQuasiQuotePat,
+                  runQuasiQuoteDecl, runQuasiQuoteType,
+-                 runAnnotation ) where
++                 runAnnotation,
++                 RunQuasiQuoteHook(..)
++                 ) where
+ 
+ #include "HsVersions.h"
+ 
+@@ -74,9 +77,11 @@ import Unique
+ import Data.Maybe
+ import BasicTypes
+ import DynFlags
++import Hooks
+ import Panic
+ import FastString
+ import Control.Monad    ( when, zipWithM )
++import Data.Typeable    ( Typeable )
+ 
+ import qualified Language.Haskell.TH as TH
+ -- THSyntax gives access to internal functions and data types
+@@ -686,6 +691,9 @@ the splice is run by the *renamer* rather than the type checker.
+ See Note [Quasi-quote overview] in TcSplice.
+ 
+ \begin{code}
++data RunQuasiQuoteHook = RunQuasiQuoteHook deriving (Typeable)
++type instance Hook RunQuasiQuoteHook = HsQuasiQuote Name -> RnM (HsQuasiQuote Name)
++
+ runQuasiQuote :: Outputable hs_syn
+               => HsQuasiQuote RdrName   -- Contains term of type QuasiQuoter, and the String
+               -> Name                   -- Of type QuasiQuoter -> String -> Q th_syn
+@@ -721,10 +729,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
+         ; checkTc (not is_local) (quoteStageError quoter')
+ 
+         ; traceTc "runQQ" (ppr quoter <+> ppr is_local)
++        ; HsQuasiQuote quoter'' _ quote' <- getHooked RunQuasiQuoteHook return >>=
++             ($ HsQuasiQuote quoter' q_span quote)
+ 
+           -- Build the expression
+-        ; let quoterExpr = L q_span $! HsVar $! quoter'
+-        ; let quoteExpr = L q_span $! HsLit $! HsString quote
++        ; let quoterExpr = L q_span $! HsVar $! quoter''
++        ; let quoteExpr = L q_span $! HsLit $! HsString quote'
+         ; let expr = L q_span $
+                      HsApp (L q_span $
+                             HsApp (L q_span (HsVar quote_selector)) quoterExpr) quoteExpr
+@@ -879,6 +889,7 @@ runMeta show_code run_and_convert expr
+         }}}
+   where
+     -- see Note [Concealed TH exceptions]
++    fail_with_exn :: Exception e => String -> e -> TcM a
+     fail_with_exn phase exn = do
+         exn_msg <- liftIO $ Panic.safeShowException exn
+         let msg = vcat [text "Exception when trying to" <+> text phase <+> text "compile-time code:",
 diff --git a/compiler/utils/Platform.hs b/compiler/utils/Platform.hs
 index 617e691..f69bb4c 100644
 --- a/compiler/utils/Platform.hs

@@ -39,7 +39,11 @@ install_src_pkg 'jmacro' '0.7.0.1' &&
 install_src_pkg 'generic-deriving' '1.5.0.0.1' &&
 install_src_pkg 'crypto-api' '0.12.2.1.2' &&
 install_src_pkg 'primitive' '0.5.0.1.1' &&
-install_src_pkg 'test-framework' '0.8.0.1'
+install_src_pkg 'test-framework' '0.8.0.1' &&
+install_src_pkg 'unix' '2.7.0.0' &&
+install_src_pkg 'process' '1.2.0.0' &&
+install_src_pkg 'bytestring' '0.10.3.0' &&
+install_src_pkg 'directory' '1.2.0.1.1'
 ) &&
 
 touch /home/vagrant/build1 &&

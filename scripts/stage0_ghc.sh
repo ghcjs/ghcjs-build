@@ -39,8 +39,6 @@ echo "====================================" &&
 perl boot && 
 ./configure --prefix=/home/vagrant/ghc &&
 
-cp -r . ../ghcjs-boot &&
-
 make -j5 &&
 make install &&
 hash -r &&

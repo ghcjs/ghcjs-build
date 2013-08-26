@@ -13,21 +13,11 @@ cabal install -j4 --enable-executable-dynamic &&
 # required for testsuite
 cabal install stm QuickCheck &&
 
-cd ../ghcjs-boot &&
 ghcjs-boot --init &&
 
 cd &&
 
-cp -rf ghcjs-build-refs/shims .ghcjs/*-linux-*/ &&
-
-cabal install --ghcjs ./ghcjs-boot/libraries/bytestring \
-                      ./ghcjs-boot/libraries/unix \
-                      ./ghcjs-boot/libraries/directory \
-                      ./ghcjs-boot/libraries/process \
-                      ./ghcjs-prim \
-                      ./ghcjs-base \
-                      ./ghcjs-dom \
-                      ./ghcjs-jquery &&
+cabal install --ghcjs ./ghcjs-dom ./ghcjs-jquery &&
 
 echo "====================================" &&
 echo " Installing examples" &&

@@ -70,9 +70,6 @@
 [submodule "refs/ghcjs"]
 	path = refs/ghcjs
 	url = https://github.com/ghcjs/ghcjs
-[submodule "refs/ghcjs-base"]
-	path = refs/ghcjs-base
-	url = https://github.com/ghcjs/ghcjs-base
 [submodule "refs/ghcjs-dom"]
 	path = refs/ghcjs-dom
 	url = https://github.com/ghcjs/ghcjs-dom
@@ -82,9 +79,9 @@
 [submodule "refs/ghcjs-jquery"]
 	path = refs/ghcjs-jquery
 	url = https://github.com/ghcjs/ghcjs-jquery
-[submodule "refs/ghcjs-prim"]
-	path = refs/ghcjs-prim
-	url = https://github.com/ghcjs/ghcjs-prim
 [submodule "refs/shims"]
 	path = refs/shims
 	url = https://github.com/ghcjs/shims
+[submodule "refs/ghcjs-boot"]
+	path = refs/ghcjs-boot
+	url = https://github.com/ghcjs/ghcjs-boot.git

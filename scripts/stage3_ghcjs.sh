@@ -8,11 +8,20 @@ echo " Installing GHCJS"
 echo "===================================="
 
 cd ghcjs &&
-cabal install -j4 --enable-executable-dynamic &&
+# cabal install -j4 --enable-executable-dynamic &&
 
 # required for testsuite
-cabal install stm QuickCheck &&
+# cabal install stm QuickCheck &&
 
+LIBDIR=`ghcjs --print-libdir` &&
+echo "using GHCJS library dir: $LIBDIR" &&
+mkdir -p "$LIBDIR" &&
+cd "$LIBDIR" &&
+cd .. &&
+rm -rf ghcjs-boot shims &&
+cp -rf "$HOME/ghcjs-build-refs/ghcjs-boot" . &&
+cp -rf "$HOME/ghcjs-build-refs/shims" . &&
+cd ghcjs-boot &&
 ghcjs-boot --init &&
 
 cd &&

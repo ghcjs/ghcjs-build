@@ -2,6 +2,8 @@
 A Vagrant setup to build ghcjs
 ======
 
+*Note: only vagrant >= 1.2 is supported*
+
 Make sure you pull down all the submodules (including the submodules of submodules).
 If in doubt run this::
 

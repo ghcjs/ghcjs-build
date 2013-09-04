@@ -27,6 +27,7 @@ echo " Patching GHC" &&
 echo "====================================" &&
 
 cd ghc-source &&
+patch -p1 < /home/vagrant/ghcjs-build-refs/patches/ghc-hooks.patch &&
 patch -p1 < /home/vagrant/ghcjs-build-refs/patches/ghc-ghcjs.patch &&
 # echo 'BuildFlavour = quick' > mk/build.mk &&
 # cat mk/build.mk.sample >> mk/build.mk &&

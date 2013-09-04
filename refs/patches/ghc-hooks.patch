@@ -1,0 +1,835 @@
+diff --git a/compiler/deSugar/DsForeign.lhs b/compiler/deSugar/DsForeign.lhs
+index 1053b91..90ae698 100644
+--- a/compiler/deSugar/DsForeign.lhs
++++ b/compiler/deSugar/DsForeign.lhs
+@@ -6,7 +6,16 @@
+ Desugaring foreign declarations (see also DsCCall).
+ 
+ \begin{code}
+-module DsForeign ( dsForeigns ) where
++{-# LANGUAGE TypeFamilies #-}
++
++module DsForeign ( dsForeigns
++                 , dsForeigns'
++                 , DsForeignsHook (..)
++                 , dsFImport, dsCImport, dsFCall, dsPrimCall
++                 , dsFExport, dsFExportDynamic, mkFExportCBits
++                 , toCType
++                 , foreignExportInitialiser
++                 ) where
+ 
+ #include "HsVersions.h"
+ import TcRnMonad        -- temp
+@@ -30,6 +39,7 @@ import TyCon
+ import Coercion
+ import TcEnv
+ import TcType
++import Hooks
+ 
+ import CmmExpr
+ import CmmUtils
+@@ -51,6 +61,7 @@ import Util
+ 
+ import Data.Maybe
+ import Data.List
++import Data.Typeable (Typeable)
+ \end{code}
+ 
+ Desugaring of @foreign@ declarations is naturally split up into
+@@ -70,11 +81,18 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
+ type Binding = (Id, CoreExpr)   -- No rec/nonrec structure;
+                                 -- the occurrence analyser will sort it all out
+ 
++data DsForeignsHook = DsForeignsHook deriving Typeable
++type instance Hook DsForeignsHook = [LForeignDecl Id] -> DsM (ForeignStubs, OrdList Binding)
++
+ dsForeigns :: [LForeignDecl Id]
+            -> DsM (ForeignStubs, OrdList Binding)
+-dsForeigns []
++dsForeigns fos = getHooked DsForeignsHook dsForeigns' >>= ($ fos)
++
++dsForeigns' :: [LForeignDecl Id]
++            -> DsM (ForeignStubs, OrdList Binding)
++dsForeigns' []
+   = return (NoStubs, nilOL)
+-dsForeigns fos = do
++dsForeigns' fos = do
+     fives <- mapM do_ldecl fos
+     let
+         (hs, cs, idss, bindss) = unzip4 fives
+diff --git a/compiler/ghc.cabal.in b/compiler/ghc.cabal.in
+index bfcbb87..a256901 100644
+--- a/compiler/ghc.cabal.in
++++ b/compiler/ghc.cabal.in
+@@ -58,6 +58,9 @@ Library
+     if flag(stage1) && impl(ghc < 7.5)
+         Build-Depends: old-time   >= 1   && < 1.2
+ 
++    if !flag(stage1)
++        Build-Depends: ghc-prim
++
+     if os(windows)
+         Build-Depends: Win32
+     else
+@@ -134,6 +137,7 @@ Library
+         Demand
+         Exception
+         GhcMonad
++        Hooks
+         Id
+         IdInfo
+         Literal
+diff --git a/compiler/ghc.mk b/compiler/ghc.mk
+index 1149fbd..eb1df1e 100644
+--- a/compiler/ghc.mk
++++ b/compiler/ghc.mk
+@@ -436,7 +436,7 @@ compiler_stage3_SplitObjs = NO
+ # We therefore need to split some of the modules off into a separate
+ # DLL. This clump are the modules reachable from DynFlags:
+ compiler_stage2_dll0_START_MODULE = DynFlags
+-compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes Binary Bitmap BlockId BreakArray BufWrite ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Fingerprint FiniteMap ForeignCall Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes Id IdInfo IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcType TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
++compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes Binary Bitmap BlockId BreakArray BufWrite ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Fingerprint FiniteMap ForeignCall Hooks Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes Id IdInfo IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcType TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
+ 
+ compiler_stage2_dll0_HS_OBJS = \
+     $(patsubst %,compiler/stage2/build/%.$(dyn_osuf),$(subst .,/,$(compiler_stage2_dll0_MODULES)))
+diff --git a/compiler/ghci/Linker.lhs b/compiler/ghci/Linker.lhs
+index 192df2e..d322eae 100644
+--- a/compiler/ghci/Linker.lhs
++++ b/compiler/ghci/Linker.lhs
+@@ -8,6 +8,7 @@
+ -- calling the object-code linker and the byte-code linker where
+ -- necessary.
+ 
++{-# LANGUAGE TypeFamilies #-}
+ {-# OPTIONS -fno-cse #-}
+ -- -fno-cse is needed for GLOBAL_VAR's to behave properly
+ 
+@@ -18,7 +19,10 @@ module Linker ( HValue, getHValue, showLinkerState,
+                 linkPackages,initDynLinker,linkModule,
+ 
+                 -- Saving/restoring globals
+-                PersistentLinkerState, saveLinkerGlobals, restoreLinkerGlobals
++                PersistentLinkerState, saveLinkerGlobals, restoreLinkerGlobals,
++                -- Hook for customizing library locations
++                LocateLibHook(..), locateLib', LibrarySpec(..),
++                searchForLibUsingGcc
+         ) where
+ 
+ #include "HsVersions.h"
+@@ -53,15 +57,17 @@ import Config
+ import Platform
+ import SysTools
+ import PrelNames
++import Hooks
+ 
+ -- Standard libraries
+ import Control.Monad
+ 
+ import Data.IORef
+ import Data.List
++import Data.Maybe (fromMaybe)
+ import qualified Data.Map as Map
+ import Control.Concurrent.MVar
+-
++import Data.Typeable (Typeable)
+ import System.FilePath
+ import System.IO
+ #if __GLASGOW_HASKELL__ > 704
+@@ -1170,8 +1176,16 @@ loadFrameworks platform pkg
+ -- which generally means that it should be a dynamic library in the
+ -- standard system search path.
+ 
++data LocateLibHook = LocateLibHook deriving Typeable
++type instance Hook LocateLibHook =
++  DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
++
+ locateLib :: DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
+-locateLib dflags is_hs dirs lib
++locateLib dflags = (fromMaybe locateLib' $
++  lookupHook LocateLibHook (hooks dflags)) dflags
++
++locateLib' :: DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
++locateLib' dflags is_hs dirs lib
+   | not is_hs
+     -- For non-Haskell libraries (e.g. gmp, iconv):
+     --   first look in library-dirs for a dynamic library (libfoo.so)
+diff --git a/compiler/iface/LoadIface.lhs b/compiler/iface/LoadIface.lhs
+index ac0b09c..8bcdd37 100644
+--- a/compiler/iface/LoadIface.lhs
++++ b/compiler/iface/LoadIface.lhs
+@@ -7,6 +7,8 @@ Loading interface files
+ 
+ \begin{code}
+ {-# OPTIONS_GHC -fno-warn-orphans #-}
++{-# LANGUAGE TypeFamilies #-}
++
+ module LoadIface (
+         -- RnM/TcM functions
+         loadModuleInterface, loadModuleInterfaces, 
+@@ -19,7 +21,9 @@ module LoadIface (
+         loadDecls,      -- Should move to TcIface and be renamed
+         initExternalPackageState,
+ 
+-        ifaceStats, pprModIface, showIface
++        ifaceStats, pprModIface, showIface,
++
++        GhcPrimIfaceHook (..)
+    ) where
+ 
+ #include "HsVersions.h"
+@@ -59,9 +63,11 @@ import Panic
+ import Util
+ import FastString
+ import Fingerprint
++import Hooks
+ 
+ import Control.Monad
+ import Data.IORef
++import Data.Typeable
+ import System.FilePath
+ \end{code}
+ 
+@@ -494,7 +500,13 @@ bumpDeclStats name
+ %*                                                      *
+ %*********************************************************
+ 
++
++
+ \begin{code}
++
++data GhcPrimIfaceHook = GhcPrimIfaceHook deriving Typeable
++type instance Hook GhcPrimIfaceHook = ModIface
++
+ findAndReadIface :: SDoc -> Module
+                  -> IsBootInterface     -- True  <=> Look for a .hi-boot file
+                                         -- False <=> Look for .hi file
+@@ -516,7 +528,9 @@ findAndReadIface doc_str mod hi_boot_file
+ 
+        -- Check for GHC.Prim, and return its static interface
+        if mod == gHC_PRIM
+-           then return (Succeeded (ghcPrimIface,
++           then do
++               iface <- getHooked GhcPrimIfaceHook ghcPrimIface
++               return (Succeeded (iface,
+                                    "<built in interface for GHC.Prim>"))
+            else do
+                dflags <- getDynFlags
+diff --git a/compiler/main/DriverPipeline.hs b/compiler/main/DriverPipeline.hs
+index 7c5bc90..53aedbb 100644
+--- a/compiler/main/DriverPipeline.hs
++++ b/compiler/main/DriverPipeline.hs
+@@ -1,5 +1,5 @@
+ {-# OPTIONS -fno-cse #-}
+-{-# LANGUAGE NamedFieldPuns #-}
++{-# LANGUAGE NamedFieldPuns, TypeFamilies #-}
+ -- -fno-cse is needed for GLOBAL_VAR's to behave properly
+ 
+ -----------------------------------------------------------------------------
+@@ -23,6 +23,15 @@ module DriverPipeline (
+    compileOne, compileOne',
+    link,
+ 
++        -- Hook to override behaviour for each phase
++   RunPhaseHook(..),
++   PhasePlus(..), CompPipeline(..), PipeEnv(..), PipeState(..),
++   phaseOutputFilename, getPipeState, getPipeEnv,
++   hscPostBackendPhase, getLocation, setModLocation, setDynFlags,
++   runPhase,
++   LinkBinaryHook(..), linkBinary'', exeFileName,
++   mkExtraObjToLinkIntoBinary, mkNoteObjsToLinkIntoBinary,
++   maybeCreateManifest, runPhase_MoveBinary
+   ) where
+ 
+ #include "HsVersions.h"
+@@ -31,7 +40,7 @@ import Packages
+ import HeaderInfo
+ import DriverPhases
+ import SysTools
+-import HscMain
++import HscMain hiding ( Hsc )
+ import Finder
+ import HscTypes
+ import Outputable
+@@ -52,6 +61,7 @@ import LlvmCodeGen      ( llvmFixupAsm )
+ import MonadUtils
+ import Platform
+ import TcRnTypes
++import Hooks
+ 
+ import Exception
+ import Data.IORef       ( readIORef )
+@@ -61,6 +71,7 @@ import System.IO
+ import Control.Monad
+ import Data.List        ( isSuffixOf )
+ import Data.Maybe
++import Data.Typeable    ( Typeable )
+ import System.Environment
+ import Data.Char
+ 
+@@ -728,7 +739,7 @@ pipeLoop phase input_fn = do
+    _
+      -> do liftIO $ debugTraceMsg dflags 4
+                                   (ptext (sLit "Running phase") <+> ppr phase)
+-           (next_phase, output_fn) <- runPhase phase input_fn dflags
++           (next_phase, output_fn) <- runHookedPhase phase input_fn dflags
+            r <- pipeLoop next_phase output_fn
+            case phase of
+                HscOut {} ->
+@@ -741,6 +752,15 @@ pipeLoop phase input_fn = do
+                    return ()
+            return r
+ 
++data RunPhaseHook = RunPhaseHook deriving (Typeable)
++type instance Hook RunPhaseHook =
++  PhasePlus -> FilePath -> DynFlags -> CompPipeline (PhasePlus, FilePath)
++
++runHookedPhase :: PhasePlus -> FilePath -> DynFlags 
++               -> CompPipeline (PhasePlus, FilePath)
++runHookedPhase pp input dflags =
++  fromMaybe runPhase (lookupHook RunPhaseHook $ hooks dflags) pp input dflags
++
+ -- -----------------------------------------------------------------------------
+ -- In each phase, we need to know into what filename to generate the
+ -- output.  All the logic about which filenames we generate output
+@@ -1781,8 +1801,17 @@ getHCFilePackages filename =
+ linkBinary :: DynFlags -> [FilePath] -> [PackageId] -> IO ()
+ linkBinary = linkBinary' False
+ 
++data LinkBinaryHook = LinkBinaryHook deriving Typeable
++type instance Hook LinkBinaryHook =
++  Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
++
+ linkBinary' :: Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
+-linkBinary' staticLink dflags o_files dep_packages = do
++linkBinary' staticLink dflags =
++  fromMaybe linkBinary'' (lookupHook LinkBinaryHook $ hooks dflags)
++    staticLink dflags
++
++linkBinary'' :: Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
++linkBinary'' staticLink dflags o_files dep_packages = do
+     let platform = targetPlatform dflags
+         mySettings = settings dflags
+         verbFlags = getVerbFlags dflags
+diff --git a/compiler/main/DynFlags.hs b/compiler/main/DynFlags.hs
+index e80cf65..39b7c79 100644
+--- a/compiler/main/DynFlags.hs
++++ b/compiler/main/DynFlags.hs
+@@ -11,6 +11,7 @@
+ --
+ -------------------------------------------------------------------------------
+ 
++{-# LANGUAGE FlexibleContexts #-}
+ {-# OPTIONS -fno-cse #-}
+ -- -fno-cse is needed for GLOBAL_VAR's to behave properly
+ 
+@@ -35,6 +36,7 @@ module DynFlags (
+         dynamicTooMkDynamicDynFlags,
+         DynFlags(..),
+         HasDynFlags(..), ContainsDynFlags(..),
++        getHooked,
+         RtsOptsEnabled(..),
+         HscTarget(..), isObjectTarget, defaultObjectTarget,
+         targetRetainsAllBindings,
+@@ -160,6 +162,7 @@ import Outputable
+ import Foreign.C        ( CInt(..) )
+ #endif
+ import {-# SOURCE #-} ErrUtils ( Severity(..), MsgDoc, mkLocMessage )
++import Hooks
+ 
+ import System.IO.Unsafe ( unsafePerformIO )
+ import Data.IORef
+@@ -174,6 +177,7 @@ import qualified Data.Map as Map
+ import Data.Maybe
+ import Data.Set (Set)
+ import qualified Data.Set as Set
++import Data.Typeable
+ import Data.Word
+ import System.FilePath
+ import System.IO
+@@ -662,6 +666,8 @@ data DynFlags = DynFlags {
+   -- Plugins
+   pluginModNames        :: [ModuleName],
+   pluginModNameOpts     :: [(ModuleName,String)],
++  hooks                 :: Hooks,
++
+ 
+   --  For ghc -M
+   depMakefile           :: FilePath,
+@@ -765,6 +771,9 @@ data DynFlags = DynFlags {
+ class HasDynFlags m where
+     getDynFlags :: m DynFlags
+ 
++getHooked :: (Functor f, HasDynFlags f, Typeable a) => a -> Hook a -> f (Hook a)
++getHooked x def = fmap (fromMaybe def . lookupHook x . hooks) getDynFlags
++
+ class ContainsDynFlags t where
+     extractDynFlags :: t -> DynFlags
+     replaceDynFlags :: t -> DynFlags -> t
+@@ -1290,6 +1299,7 @@ defaultDynFlags mySettings =
+ 
+         pluginModNames          = [],
+         pluginModNameOpts       = [],
++        hooks                   = emptyHooks,
+ 
+         outputFile              = Nothing,
+         dynOutputFile           = Nothing,
+diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
+index e69de29..0111339 100644
+--- a/compiler/main/Hooks.lhs
++++ b/compiler/main/Hooks.lhs
+@@ -0,0 +1,74 @@
++\section[Hooks]{Low level API hooks}
++
++\begin{code}
++{-# LANGUAGE TypeFamilies, FlexibleContexts, CPP #-}
++
++module Hooks ( Hooks
++             , Hook
++             , lookupHook
++             , emptyHooks
++#if STAGE > 1
++             , insertHook
++             , insertWithHook
++             , deleteHook
++#endif
++             ) where
++
++import           Data.Typeable
++
++#if STAGE > 1
++import           Unsafe.Coerce
++import qualified Data.Map as M
++import           GHC.Prim (Any)
++#endif
++
++\end{code}
++
++%************************************************************************
++%*                                                                      *
++\subsection{Hooks}
++%*                                                                      *
++%************************************************************************
++
++\begin{code}
++
++-- | Hooks can be used by GHC API clients and plugins to replace parts of
++--   the compiler pipeline. If a hook is not installed, GHC
++--   uses the default built-in behaviour
++
++type family Hook a :: *
++
++#if STAGE > 1
++insertHook :: Typeable a => a -> Hook a -> Hooks -> Hooks
++insertHook tag hook (Hooks m) =
++  Hooks (M.insert (typeOf tag) (unsafeCoerce hook) m)
++
++insertWithHook :: Typeable a => (Hook a -> Hook a -> Hook a)
++               -> a -> Hook a -> Hooks -> Hooks
++insertWithHook f tag hook h =
++  insertHook tag (maybe hook (f hook) $ lookupHook tag h) h
++
++deleteHook :: Typeable a  => a -> Hooks -> Hooks
++deleteHook tag (Hooks m) = Hooks (M.delete (typeOf tag) m)
++
++lookupHook :: Typeable a => a -> Hooks -> Maybe (Hook a)
++lookupHook tag (Hooks m) =
++  fmap unsafeCoerce (M.lookup (typeOf tag) m)
++
++newtype Hooks = Hooks (M.Map TypeRep Any)
++
++emptyHooks :: Hooks
++emptyHooks = Hooks M.empty
++#else
++lookupHook :: Typeable a => a -> Hooks -> Maybe (Hook a)
++lookupHook _ _ = Nothing
++
++data Hooks = Hooks
++
++emptyHooks :: Hooks
++emptyHooks = Hooks
++#endif
++
++
++\end{code}
++
+diff --git a/compiler/main/HscMain.hs b/compiler/main/HscMain.hs
+index ad1b7c5..d81fa72 100644
+--- a/compiler/main/HscMain.hs
++++ b/compiler/main/HscMain.hs
+@@ -25,6 +25,7 @@
+ -- (c) The GRASP/AQUA Project, Glasgow University, 1993-2000
+ --
+ -------------------------------------------------------------------------------
++{-# LANGUAGE TypeFamilies #-}
+ 
+ module HscMain
+     (
+@@ -71,6 +72,13 @@ module HscMain
+     , hscTcExpr, hscImport, hscKcType
+     , hscCompileCoreExpr
+ #endif
++    -- * Hooks and low-level exports for hooks
++    , Hsc(..), runHsc, hscSimplify', hscDesugar'
++    , hscSimpleIface', hscNormalIface'
++    , oneShotMsg
++    , hscFileFrontEnd, genericHscFrontend, dumpIfaceStats
++    , HscFrontendHook(..)
++    , HscCompileOneShotHook(..)
+     ) where
+ 
+ #ifdef GHCI
+@@ -128,6 +136,7 @@ import NameSet          ( emptyNameSet )
+ import InstEnv
+ import FamInstEnv
+ import Fingerprint      ( Fingerprint )
++import Hooks
+ 
+ import DynFlags
+ import ErrUtils
+@@ -152,6 +161,7 @@ import Data.Maybe
+ import Data.IORef
+ import System.FilePath as FilePath
+ import System.Directory
++import Data.Typeable ( Typeable )
+ 
+ #include "HsVersions.h"
+ 
+@@ -602,24 +612,45 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
+                     Just tc_result ->
+                         return $ Right (tc_result, mb_old_hash)
+ 
++data HscFrontendHook = HscFrontendHook deriving Typeable
++type instance Hook HscFrontendHook = ModSummary -> Hsc TcGblEnv
++
+ genericHscFrontend :: ModSummary -> Hsc TcGblEnv
+-genericHscFrontend mod_summary
++genericHscFrontend mod_summary =
++  getHooked HscFrontendHook genericHscFrontend' >>= ($ mod_summary)
++
++genericHscFrontend' :: ModSummary -> Hsc TcGblEnv
++genericHscFrontend' mod_summary
+     | ExtCoreFile <- ms_hsc_src mod_summary =
+         panic "GHC does not currently support reading External Core files"
+-    | otherwise = do
++    | otherwise =
+         hscFileFrontEnd mod_summary
+ 
+ --------------------------------------------------------------
+ -- Compilers
+ --------------------------------------------------------------
+ 
+--- Compile Haskell, boot and extCore in OneShot mode.
++data HscCompileOneShotHook =
++  HscCompileOneShotHook deriving Typeable
++type instance Hook HscCompileOneShotHook =
++  HscEnv -> FilePath -> ModSummary -> SourceModified -> IO HscStatus
++
+ hscCompileOneShot :: HscEnv
+                   -> FilePath
+                   -> ModSummary
+                   -> SourceModified
+                   -> IO HscStatus
+-hscCompileOneShot hsc_env extCore_filename mod_summary src_changed
++hscCompileOneShot env =
++  fromMaybe hscCompileOneShot'
++    (lookupHook HscCompileOneShotHook . hooks . hsc_dflags $ env) env
++
++-- Compile Haskell, boot and extCore in OneShot mode.
++hscCompileOneShot' :: HscEnv
++                   -> FilePath
++                   -> ModSummary
++                   -> SourceModified
++                   -> IO HscStatus
++hscCompileOneShot' hsc_env extCore_filename mod_summary src_changed
+   = do
+     -- One-shot mode needs a knot-tying mutable variable for interface
+     -- files. See TcRnTypes.TcGblEnv.tcg_type_env_var.
+diff --git a/compiler/main/Packages.lhs b/compiler/main/Packages.lhs
+index fb832ff..97bb365 100644
+--- a/compiler/main/Packages.lhs
++++ b/compiler/main/Packages.lhs
+@@ -2,6 +2,7 @@
+ % (c) The University of Glasgow, 2006
+ %
+ \begin{code}
++{-# LANGUAGE TypeFamilies #-}
+ -- | Package manipulation
+ module Packages (
+         module PackageConfig,
+@@ -28,6 +29,9 @@ module Packages (
+         collectIncludeDirs, collectLibraryPaths, collectLinkOpts,
+         packageHsLibs,
+ 
++        -- * Hook for customizing library filenames
++        PackageHsLibsHook(..), packageHsLibs',
++
+         -- * Utils
+         isDllName
+     )
+@@ -45,6 +49,7 @@ import Util
+ import Panic
+ import Outputable
+ import Maybes
++import Hooks
+ 
+ import System.Environment ( getEnv )
+ import Distribution.InstalledPackageInfo
+@@ -61,6 +66,7 @@ import Control.Monad
+ import Data.Char (isSpace)
+ import Data.List as List
+ import Data.Map (Map)
++import Data.Typeable ( Typeable )
+ import qualified Data.Map as Map
+ import qualified FiniteMap as Map
+ import qualified Data.Set as Set
+@@ -881,8 +887,17 @@ collectLinkOpts dflags ps =
+         concatMap ldOptions ps
+     )
+ 
++data PackageHsLibsHook = PackageHsLibsHook deriving Typeable
++type instance Hook PackageHsLibsHook
++  = DynFlags -> PackageConfig -> [String]
++
+ packageHsLibs :: DynFlags -> PackageConfig -> [String]
+-packageHsLibs dflags p = map (mkDynName . addSuffix) (hsLibraries p)
++packageHsLibs dflags =
++  fromMaybe packageHsLibs'
++    (lookupHook PackageHsLibsHook $ hooks dflags) dflags
++
++packageHsLibs' :: DynFlags -> PackageConfig -> [String]
++packageHsLibs' dflags p = map (mkDynName . addSuffix) (hsLibraries p)
+   where
+         ways0 = ways dflags
+ 
+diff --git a/compiler/main/SysTools.lhs b/compiler/main/SysTools.lhs
+index 78255b7..61e6810 100644
+--- a/compiler/main/SysTools.lhs
++++ b/compiler/main/SysTools.lhs
+@@ -7,6 +7,7 @@
+ -----------------------------------------------------------------------------
+ 
+ \begin{code}
++{-# LANGUAGE TypeFamilies #-}
+ module SysTools (
+         -- Initialisation
+         initSysTools,
+@@ -40,8 +41,10 @@ module SysTools (
+         cleanTempDirs, cleanTempFiles, cleanTempFilesExcept,
+         addFilesToClean,
+ 
+-        Option(..)
++        Option(..),
+ 
++        -- Hook for custom dynLib linking
++        LinkDynLibHook(..), linkDynLib'
+  ) where
+ 
+ #include "HsVersions.h"
+@@ -57,6 +60,7 @@ import Platform
+ import Util
+ import DynFlags
+ import Exception
++import Hooks
+ 
+ import Data.IORef
+ import Control.Monad
+@@ -68,6 +72,8 @@ import System.IO.Error as IO
+ import System.Directory
+ import Data.Char
+ import Data.List
++import Data.Maybe (fromMaybe)
++import Data.Typeable
+ import qualified Data.Map as Map
+ import Text.ParserCombinators.ReadP hiding (char)
+ import qualified Text.ParserCombinators.ReadP as R
+@@ -211,6 +217,7 @@ initSysTools mbMinusB
+                                    Just "NO" -> return False
+                                    Just xs -> pgmError ("Bad value for " ++ show key ++ ": " ++ show xs)
+                                    Nothing -> pgmError ("No entry for " ++ show key ++ " in " ++ show settingsFile)
++           readSetting :: (Monad m, Read a) => String -> m a
+            readSetting key = case lookup key mySettings of
+                              Just xs ->
+                                  case maybeRead xs of
+@@ -985,6 +992,7 @@ handleProc pgm phase_name proc = do
+           then does_not_exist
+           else IO.ioError err
+ 
++    does_not_exist :: IO a
+     does_not_exist = throwGhcExceptionIO (InstallationError ("could not execute: " ++ pgm))
+ 
+ 
+@@ -1188,8 +1196,16 @@ linesPlatform xs =
+ 
+ #endif
+ 
++data LinkDynLibHook = LinkDynLibHook deriving Typeable
++type instance Hook LinkDynLibHook =
++  DynFlags -> [String] -> [PackageId] -> IO ()
++
+ linkDynLib :: DynFlags -> [String] -> [PackageId] -> IO ()
+-linkDynLib dflags0 o_files dep_packages
++linkDynLib dflags =
++  fromMaybe linkDynLib' (lookupHook LinkDynLibHook $ hooks dflags) dflags
++
++linkDynLib' :: DynFlags -> [String] -> [PackageId] -> IO ()
++linkDynLib' dflags0 o_files dep_packages
+  = do
+     let -- This is a rather ugly hack to fix dynamically linked
+         -- GHC on Windows. If GHC is linked with -threaded, then
+diff --git a/compiler/typecheck/TcForeign.lhs b/compiler/typecheck/TcForeign.lhs
+index 9914f94..bbfc040 100644
+--- a/compiler/typecheck/TcForeign.lhs
++++ b/compiler/typecheck/TcForeign.lhs
+@@ -12,10 +12,25 @@ is restricted to what the outside world understands (read C), and this
+ module checks to see if a foreign declaration has got a legal type.
+ 
+ \begin{code}
++{-# LANGUAGE TypeFamilies #-}
++
+ module TcForeign
+         (
+           tcForeignImports
+         , tcForeignExports
++
++        -- Hooks and low-level exports for hooks
++        , isForeignImport, isForeignExport
++        , tcFImport, tcFExport
++        , TcForeignImportsHook (..)
++        , tcForeignImports'
++        , tcCheckFIType, checkCTarget, checkForeignArgs, checkForeignRes
++        , normaliseFfiType
++        , nonIOok, mustBeIO
++        , checkSafe, noCheckSafe
++        , TcForeignExportsHook (..)
++        , tcForeignExports'
++        , tcCheckFEType
+         ) where
+ 
+ #include "HsVersions.h"
+@@ -29,7 +44,7 @@ import TcEnv
+ 
+ import FamInst
+ import FamInstEnv
+-import Coercion      
++import Coercion
+ import Type
+ import TypeRep
+ import ForeignCall
+@@ -47,8 +62,10 @@ import Platform
+ import SrcLoc
+ import Bag
+ import FastString
++import Hooks
+ 
+ import Control.Monad
++import Data.Typeable (Typeable)
+ \end{code}
+ 
+ \begin{code}
+@@ -191,10 +208,18 @@ to the module's usages.
+ %************************************************************************
+ 
+ \begin{code}
++data TcForeignImportsHook = TcForeignImportsHook deriving Typeable
++type instance Hook TcForeignImportsHook = [LForeignDecl Name]
++        -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
++
+ tcForeignImports :: [LForeignDecl Name] -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
++tcForeignImports decls
++  = getHooked TcForeignImportsHook tcForeignImports' >>= ($decls)
++
++tcForeignImports' :: [LForeignDecl Name] -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
+ -- For the (Bag GlobalRdrElt) result, 
+ -- see Note [Newtype constructor usage in foreign declarations]
+-tcForeignImports decls
++tcForeignImports' decls
+   = do { (ids, decls, gres) <- mapAndUnzip3M tcFImport $
+                                filter isForeignImport decls
+        ; return (ids, decls, unionManyBags gres) }
+@@ -321,11 +346,20 @@ checkMissingAmpersand dflags arg_tys res_ty
+ %************************************************************************
+ 
+ \begin{code}
++data TcForeignExportsHook = TcForeignExportsHook deriving Typeable
++type instance Hook TcForeignExportsHook = [LForeignDecl Name] 
++                 -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
++
+ tcForeignExports :: [LForeignDecl Name]
+                  -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
++tcForeignExports decls =
++  getHooked TcForeignExportsHook tcForeignExports' >>= ($decls)
++
++tcForeignExports' :: [LForeignDecl Name]
++                 -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
+ -- For the (Bag GlobalRdrElt) result, 
+ -- see Note [Newtype constructor usage in foreign declarations]
+-tcForeignExports decls
++tcForeignExports' decls
+   = foldlM combine (emptyLHsBinds, [], emptyBag) (filter isForeignExport decls)
+   where
+    combine (binds, fs, gres1) (L loc fe) = do
+diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
+index 2528e69..c79c6c5 100644
+--- a/compiler/typecheck/TcSplice.lhs
++++ b/compiler/typecheck/TcSplice.lhs
+@@ -8,11 +8,14 @@ TcSplice: Template Haskell splices
+ 
+ \begin{code}
+ {-# OPTIONS_GHC -fno-warn-orphans #-}
++{-# LANGUAGE TypeFamilies #-}
+ module TcSplice( tcSpliceType, tcSpliceExpr, tcSpliceDecls, tcBracket,
+                  lookupThName_maybe,
+                  runQuasiQuoteExpr, runQuasiQuotePat,
+                  runQuasiQuoteDecl, runQuasiQuoteType,
+-                 runAnnotation ) where
++                 runAnnotation,
++                 RunQuasiQuoteHook(..)
++                 ) where
+ 
+ #include "HsVersions.h"
+ 
+@@ -74,9 +77,11 @@ import Unique
+ import Data.Maybe
+ import BasicTypes
+ import DynFlags
++import Hooks
+ import Panic
+ import FastString
+ import Control.Monad    ( when, zipWithM )
++import Data.Typeable    ( Typeable )
+ 
+ import qualified Language.Haskell.TH as TH
+ -- THSyntax gives access to internal functions and data types
+@@ -686,6 +691,9 @@ the splice is run by the *renamer* rather than the type checker.
+ See Note [Quasi-quote overview] in TcSplice.
+ 
+ \begin{code}
++data RunQuasiQuoteHook = RunQuasiQuoteHook deriving (Typeable)
++type instance Hook RunQuasiQuoteHook = HsQuasiQuote Name -> RnM (HsQuasiQuote Name)
++
+ runQuasiQuote :: Outputable hs_syn
+               => HsQuasiQuote RdrName   -- Contains term of type QuasiQuoter, and the String
+               -> Name                   -- Of type QuasiQuoter -> String -> Q th_syn
+@@ -721,10 +729,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
+         ; checkTc (not is_local) (quoteStageError quoter')
+ 
+         ; traceTc "runQQ" (ppr quoter <+> ppr is_local)
++        ; HsQuasiQuote quoter'' _ quote' <- getHooked RunQuasiQuoteHook return >>=
++             ($ HsQuasiQuote quoter' q_span quote)
+ 
+           -- Build the expression
+-        ; let quoterExpr = L q_span $! HsVar $! quoter'
+-        ; let quoteExpr = L q_span $! HsLit $! HsString quote
++        ; let quoterExpr = L q_span $! HsVar $! quoter''
++        ; let quoteExpr = L q_span $! HsLit $! HsString quote'
+         ; let expr = L q_span $
+                      HsApp (L q_span $
+                             HsApp (L q_span (HsVar quote_selector)) quoterExpr) quoteExpr
+@@ -879,6 +889,7 @@ runMeta show_code run_and_convert expr
+         }}}
+   where
+     -- see Note [Concealed TH exceptions]
++    fail_with_exn :: Exception e => String -> e -> TcM a
+     fail_with_exn phase exn = do
+         exn_msg <- liftIO $ Panic.safeShowException exn
+         let msg = vcat [text "Exception when trying to" <+> text phase <+> text "compile-time code:",

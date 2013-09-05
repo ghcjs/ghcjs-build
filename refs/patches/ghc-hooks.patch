@@ -412,7 +412,7 @@ index e69de29..0111339 100644
 +
 +\begin{code}
 +
-+-- | Hooks can be used by GHC API clients and plugins to replace parts of
++-- | Hooks can be used by GHC API clients to replace parts of
 +--   the compiler pipeline. If a hook is not installed, GHC
 +--   uses the default built-in behaviour
 +

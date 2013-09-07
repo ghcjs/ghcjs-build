@@ -1,5 +1,5 @@
 diff --git a/compiler/deSugar/DsForeign.lhs b/compiler/deSugar/DsForeign.lhs
-index 1053b91..4469c3f 100644
+index 1053b91..ffc7a87 100644
 --- a/compiler/deSugar/DsForeign.lhs
 +++ b/compiler/deSugar/DsForeign.lhs
 @@ -6,7 +6,14 @@
@@ -18,15 +18,7 @@ index 1053b91..4469c3f 100644
  
  #include "HsVersions.h"
  import TcRnMonad        -- temp
-@@ -30,6 +37,7 @@ import TyCon
- import Coercion
- import TcEnv
- import TcType
-+import Hooks
- 
- import CmmExpr
- import CmmUtils
-@@ -51,6 +59,7 @@ import Util
+@@ -51,6 +58,7 @@ import Util
  
  import Data.Maybe
  import Data.List
@@ -34,7 +26,7 @@ index 1053b91..4469c3f 100644
  \end{code}
  
  Desugaring of @foreign@ declarations is naturally split up into
-@@ -70,11 +79,19 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
+@@ -70,11 +78,19 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
  type Binding = (Id, CoreExpr)   -- No rec/nonrec structure;
                                  -- the occurrence analyser will sort it all out
  
@@ -135,7 +127,7 @@ index 192df2e..a721ed2 100644
      -- For non-Haskell libraries (e.g. gmp, iconv):
      --   first look in library-dirs for a dynamic library (libfoo.so)
 diff --git a/compiler/iface/LoadIface.lhs b/compiler/iface/LoadIface.lhs
-index ac0b09c..65d2d91 100644
+index ac0b09c..0ceb3cd 100644
 --- a/compiler/iface/LoadIface.lhs
 +++ b/compiler/iface/LoadIface.lhs
 @@ -19,7 +19,9 @@ module LoadIface (
@@ -149,11 +141,7 @@ index ac0b09c..65d2d91 100644
     ) where
  
  #include "HsVersions.h"
-@@ -59,9 +61,11 @@ import Panic
- import Util
- import FastString
- import Fingerprint
-+import Hooks
+@@ -62,6 +64,7 @@ import Fingerprint
  
  import Control.Monad
  import Data.IORef
@@ -161,7 +149,7 @@ index ac0b09c..65d2d91 100644
  import System.FilePath
  \end{code}
  
-@@ -495,6 +499,11 @@ bumpDeclStats name
+@@ -495,6 +498,11 @@ bumpDeclStats name
  %*********************************************************
  
  \begin{code}
@@ -173,7 +161,7 @@ index ac0b09c..65d2d91 100644
  findAndReadIface :: SDoc -> Module
                   -> IsBootInterface     -- True  <=> Look for a .hi-boot file
                                          -- False <=> Look for .hi file
-@@ -516,7 +525,9 @@ findAndReadIface doc_str mod hi_boot_file
+@@ -516,7 +524,9 @@ findAndReadIface doc_str mod hi_boot_file
  
         -- Check for GHC.Prim, and return its static interface
         if mod == gHC_PRIM
@@ -337,10 +325,10 @@ index 6e895d3..fc8ec40 100644
          outputFile              = Nothing,
          dynOutputFile           = Nothing,
 diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
-index e69de29..1339129 100644
+index e69de29..4be9a98 100644
 --- a/compiler/main/Hooks.lhs
 +++ b/compiler/main/Hooks.lhs
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,49 @@
 +\section[Hooks]{Low level API hooks}
 +
 +\begin{code}
@@ -353,7 +341,6 @@ index e69de29..1339129 100644
 +             ) where
 +
 +import           Data.Dynamic
-+import           Data.Typeable
 +import qualified Data.Map as M
 +\end{code}
 +
@@ -392,24 +379,25 @@ index e69de29..1339129 100644
 +\end{code}
 +
 diff --git a/compiler/main/HscMain.hs b/compiler/main/HscMain.hs
-index ad1b7c5..ff1405f 100644
+index ad1b7c5..47d0357 100644
 --- a/compiler/main/HscMain.hs
 +++ b/compiler/main/HscMain.hs
-@@ -71,6 +71,13 @@ module HscMain
+@@ -71,6 +71,14 @@ module HscMain
      , hscTcExpr, hscImport, hscKcType
      , hscCompileCoreExpr
  #endif
 +    -- * Hooks and low-level exports for hooks
-+    , Hsc(..), runHsc, hscSimplify', hscDesugar'
++    , Hsc(..), runHsc
++    , hscParse', hscSimplify', hscDesugar', tcRnModule'
 +    , hscSimpleIface', hscNormalIface'
 +    , oneShotMsg
-+    , hscFileFrontEnd, hscFileFrontEnd', genericHscFrontend, dumpIfaceStats
++    , hscFileFrontEnd, genericHscFrontend, dumpIfaceStats
 +    , HscFrontendHook(..)
 +    , HscCompileOneShotHook(..)
      ) where
  
  #ifdef GHCI
-@@ -128,6 +135,7 @@ import NameSet          ( emptyNameSet )
+@@ -128,6 +136,7 @@ import NameSet          ( emptyNameSet )
  import InstEnv
  import FamInstEnv
  import Fingerprint      ( Fingerprint )
@@ -417,7 +405,7 @@ index ad1b7c5..ff1405f 100644
  
  import DynFlags
  import ErrUtils
-@@ -152,6 +160,7 @@ import Data.Maybe
+@@ -152,6 +161,7 @@ import Data.Maybe
  import Data.IORef
  import System.FilePath as FilePath
  import System.Directory
@@ -425,7 +413,7 @@ index ad1b7c5..ff1405f 100644
  
  #include "HsVersions.h"
  
-@@ -602,24 +611,46 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
+@@ -602,24 +612,46 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
                      Just tc_result ->
                          return $ Right (tc_result, mb_old_hash)
  
@@ -476,22 +464,6 @@ index ad1b7c5..ff1405f 100644
    = do
      -- One-shot mode needs a knot-tying mutable variable for interface
      -- files. See TcRnTypes.TcGblEnv.tcg_type_env_var.
-@@ -729,10 +760,13 @@ batchMsg hsc_env mod_index recomp mod_summary =
- --------------------------------------------------------------
- 
- hscFileFrontEnd :: ModSummary -> Hsc TcGblEnv
--hscFileFrontEnd mod_summary = do
-+hscFileFrontEnd = hscFileFrontEnd' False
-+
-+hscFileFrontEnd' :: Bool -> ModSummary -> Hsc TcGblEnv
-+hscFileFrontEnd' saveRenamedSyntax mod_summary = do
-     hpm <- hscParse' mod_summary
-     hsc_env <- getHscEnv
--    tcg_env <- tcRnModule' hsc_env mod_summary False hpm
-+    tcg_env <- tcRnModule' hsc_env mod_summary saveRenamedSyntax hpm
-     return tcg_env
- 
- --------------------------------------------------------------
 diff --git a/compiler/main/Packages.lhs b/compiler/main/Packages.lhs
 index fb832ff..250291d 100644
 --- a/compiler/main/Packages.lhs
@@ -593,7 +565,7 @@ index 78255b7..79bc7b9 100644
      let -- This is a rather ugly hack to fix dynamically linked
          -- GHC on Windows. If GHC is linked with -threaded, then
 diff --git a/compiler/typecheck/TcForeign.lhs b/compiler/typecheck/TcForeign.lhs
-index d755132..22ff0dc 100644
+index d755132..1c3f4cc 100644
 --- a/compiler/typecheck/TcForeign.lhs
 +++ b/compiler/typecheck/TcForeign.lhs
 @@ -16,6 +16,19 @@ module TcForeign
@@ -625,18 +597,15 @@ index d755132..22ff0dc 100644
  import Type
  import TypeRep
  import ForeignCall
-@@ -47,8 +60,10 @@ import Platform
- import SrcLoc
- import Bag
+@@ -49,6 +62,7 @@ import Bag
  import FastString
-+import Hooks
  
  import Control.Monad
 +import Data.Typeable (Typeable)
  \end{code}
  
  \begin{code}
-@@ -191,10 +206,18 @@ to the module's usages.
+@@ -191,10 +205,18 @@ to the module's usages.
  %************************************************************************
  
  \begin{code}
@@ -656,7 +625,7 @@ index d755132..22ff0dc 100644
    = do { (ids, decls, gres) <- mapAndUnzip3M tcFImport $
                                 filter isForeignImport decls
         ; return (ids, decls, unionManyBags gres) }
-@@ -321,11 +344,20 @@ checkMissingAmpersand dflags arg_tys res_ty
+@@ -321,11 +343,20 @@ checkMissingAmpersand dflags arg_tys res_ty
  %************************************************************************
  
  \begin{code}
@@ -679,7 +648,7 @@ index d755132..22ff0dc 100644
    where
     combine (binds, fs, gres1) (L loc fe) = do
 diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
-index 2528e69..b9e51e7 100644
+index 2528e69..a84302f 100644
 --- a/compiler/typecheck/TcSplice.lhs
 +++ b/compiler/typecheck/TcSplice.lhs
 @@ -12,7 +12,9 @@ module TcSplice( tcSpliceType, tcSpliceExpr, tcSpliceDecls, tcBracket,
@@ -693,11 +662,7 @@ index 2528e69..b9e51e7 100644
  
  #include "HsVersions.h"
  
-@@ -74,9 +76,11 @@ import Unique
- import Data.Maybe
- import BasicTypes
- import DynFlags
-+import Hooks
+@@ -77,6 +79,7 @@ import DynFlags
  import Panic
  import FastString
  import Control.Monad    ( when, zipWithM )
@@ -705,7 +670,7 @@ index 2528e69..b9e51e7 100644
  
  import qualified Language.Haskell.TH as TH
  -- THSyntax gives access to internal functions and data types
-@@ -686,6 +690,10 @@ the splice is run by the *renamer* rather than the type checker.
+@@ -686,6 +689,10 @@ the splice is run by the *renamer* rather than the type checker.
  See Note [Quasi-quote overview] in TcSplice.
  
  \begin{code}
@@ -716,7 +681,7 @@ index 2528e69..b9e51e7 100644
  runQuasiQuote :: Outputable hs_syn
                => HsQuasiQuote RdrName   -- Contains term of type QuasiQuoter, and the String
                -> Name                   -- Of type QuasiQuoter -> String -> Q th_syn
-@@ -721,10 +729,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
+@@ -721,10 +728,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
          ; checkTc (not is_local) (quoteStageError quoter')
  
          ; traceTc "runQQ" (ppr quoter <+> ppr is_local)

@@ -311,7 +311,7 @@ index 7c5bc90..53aedbb 100644
          mySettings = settings dflags
          verbFlags = getVerbFlags dflags
 diff --git a/compiler/main/DynFlags.hs b/compiler/main/DynFlags.hs
-index e80cf65..39b7c79 100644
+index 88668cb..d35b676 100644
 --- a/compiler/main/DynFlags.hs
 +++ b/compiler/main/DynFlags.hs
 @@ -11,6 +11,7 @@
@@ -346,7 +346,7 @@ index e80cf65..39b7c79 100644
  import Data.Word
  import System.FilePath
  import System.IO
-@@ -662,6 +666,8 @@ data DynFlags = DynFlags {
+@@ -665,6 +669,8 @@ data DynFlags = DynFlags {
    -- Plugins
    pluginModNames        :: [ModuleName],
    pluginModNameOpts     :: [(ModuleName,String)],
@@ -355,7 +355,7 @@ index e80cf65..39b7c79 100644
  
    --  For ghc -M
    depMakefile           :: FilePath,
-@@ -765,6 +771,9 @@ data DynFlags = DynFlags {
+@@ -768,6 +774,9 @@ data DynFlags = DynFlags {
  class HasDynFlags m where
      getDynFlags :: m DynFlags
  
@@ -365,7 +365,7 @@ index e80cf65..39b7c79 100644
  class ContainsDynFlags t where
      extractDynFlags :: t -> DynFlags
      replaceDynFlags :: t -> DynFlags -> t
-@@ -1290,6 +1299,7 @@ defaultDynFlags mySettings =
+@@ -1304,6 +1313,7 @@ defaultDynFlags mySettings =
  
          pluginModNames          = [],
          pluginModNameOpts       = [],
@@ -374,7 +374,7 @@ index e80cf65..39b7c79 100644
          outputFile              = Nothing,
          dynOutputFile           = Nothing,
 diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
-index e69de29..0111339 100644
+index e69de29..1195600 100644
 --- a/compiler/main/Hooks.lhs
 +++ b/compiler/main/Hooks.lhs
 @@ -0,0 +1,74 @@
@@ -453,7 +453,7 @@ index e69de29..0111339 100644
 +\end{code}
 +
 diff --git a/compiler/main/HscMain.hs b/compiler/main/HscMain.hs
-index ad1b7c5..d81fa72 100644
+index ad1b7c5..340cb23 100644
 --- a/compiler/main/HscMain.hs
 +++ b/compiler/main/HscMain.hs
 @@ -25,6 +25,7 @@
@@ -464,12 +464,13 @@ index ad1b7c5..d81fa72 100644
  
  module HscMain
      (
-@@ -71,6 +72,13 @@ module HscMain
+@@ -71,6 +72,14 @@ module HscMain
      , hscTcExpr, hscImport, hscKcType
      , hscCompileCoreExpr
  #endif
 +    -- * Hooks and low-level exports for hooks
-+    , Hsc(..), runHsc, hscSimplify', hscDesugar'
++    , Hsc(..), runHsc
++    , hscParse', hscSimplify', hscDesugar', tcRnModule'
 +    , hscSimpleIface', hscNormalIface'
 +    , oneShotMsg
 +    , hscFileFrontEnd, genericHscFrontend, dumpIfaceStats
@@ -478,7 +479,7 @@ index ad1b7c5..d81fa72 100644
      ) where
  
  #ifdef GHCI
-@@ -128,6 +136,7 @@ import NameSet          ( emptyNameSet )
+@@ -128,6 +137,7 @@ import NameSet          ( emptyNameSet )
  import InstEnv
  import FamInstEnv
  import Fingerprint      ( Fingerprint )
@@ -486,7 +487,7 @@ index ad1b7c5..d81fa72 100644
  
  import DynFlags
  import ErrUtils
-@@ -152,6 +161,7 @@ import Data.Maybe
+@@ -152,6 +162,7 @@ import Data.Maybe
  import Data.IORef
  import System.FilePath as FilePath
  import System.Directory
@@ -494,7 +495,7 @@ index ad1b7c5..d81fa72 100644
  
  #include "HsVersions.h"
  
-@@ -602,24 +612,45 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
+@@ -602,24 +613,45 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
                      Just tc_result ->
                          return $ Right (tc_result, mb_old_hash)
  
@@ -677,7 +678,7 @@ index 78255b7..61e6810 100644
      let -- This is a rather ugly hack to fix dynamically linked
          -- GHC on Windows. If GHC is linked with -threaded, then
 diff --git a/compiler/typecheck/TcForeign.lhs b/compiler/typecheck/TcForeign.lhs
-index 9914f94..bbfc040 100644
+index d755132..ec0068b 100644
 --- a/compiler/typecheck/TcForeign.lhs
 +++ b/compiler/typecheck/TcForeign.lhs
 @@ -12,10 +12,25 @@ is restricted to what the outside world understands (read C), and this

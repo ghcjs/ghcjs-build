@@ -294,14 +294,15 @@ index 4254efd..6be5aad 100644
          outputFile              = Nothing,
          dynOutputFile           = Nothing,
 diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
-index e69de29..47584f3 100644
+index e69de29..d9f7c96 100644
 --- a/compiler/main/Hooks.lhs
 +++ b/compiler/main/Hooks.lhs
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +\section[Hooks]{Low level API hooks}
 +
 +\begin{code}
 +module Hooks ( Hooks (..)
++             , emptyHooks
 +             , lookupHook
 +             , getHooked
 +             , setHooks
@@ -1078,7 +1079,7 @@ index d755132..963b3b8 100644
    where
     combine (binds, fs, gres1) (L loc fe) = do
 diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
-index 2528e69..7a1d355 100644
+index 2528e69..cd24a24 100644
 --- a/compiler/typecheck/TcSplice.lhs
 +++ b/compiler/typecheck/TcSplice.lhs
 @@ -12,7 +12,8 @@ module TcSplice( tcSpliceType, tcSpliceExpr, tcSpliceDecls, tcBracket,
@@ -1091,7 +1092,15 @@ index 2528e69..7a1d355 100644
  
  #include "HsVersions.h"
  
-@@ -721,10 +722,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
+@@ -49,6 +50,7 @@ import NameSet
+ import PrelNames
+ import HscTypes
+ import OccName
++import Hooks
+ import Var
+ import Module
+ import Annotations
+@@ -721,10 +723,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
          ; checkTc (not is_local) (quoteStageError quoter')
  
          ; traceTc "runQQ" (ppr quoter <+> ppr is_local)

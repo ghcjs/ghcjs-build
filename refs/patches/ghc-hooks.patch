@@ -1,17 +1,47 @@
+diff --git a/compiler/basicTypes/BasicTypes.lhs b/compiler/basicTypes/BasicTypes.lhs
+index dfde994..6fd038d 100644
+--- a/compiler/basicTypes/BasicTypes.lhs
++++ b/compiler/basicTypes/BasicTypes.lhs
+@@ -75,7 +75,9 @@ module BasicTypes(
+ 
+         SuccessFlag(..), succeeded, failed, successIf,
+ 
+-        FractionalLit(..), negateFractionalLit, integralFractionalLit
++        FractionalLit(..), negateFractionalLit, integralFractionalLit,
++
++        HValue(..)
+    ) where
+ 
+ import FastString
+@@ -83,6 +85,7 @@ import Outputable
+ 
+ import Data.Data hiding (Fixity)
+ import Data.Function (on)
++import GHC.Exts (Any)
+ \end{code}
+ 
+ %************************************************************************
+@@ -898,3 +901,9 @@ instance Ord FractionalLit where
+ instance Outputable FractionalLit where
+   ppr = text . fl_text
+ \end{code}
++
++\begin{code}
++
++newtype HValue = HValue Any
++
++\end{code}
 diff --git a/compiler/deSugar/DsForeign.lhs b/compiler/deSugar/DsForeign.lhs
-index 1053b91..90ae698 100644
+index 1053b91..c7cc13f 100644
 --- a/compiler/deSugar/DsForeign.lhs
 +++ b/compiler/deSugar/DsForeign.lhs
-@@ -6,7 +6,16 @@
+@@ -6,7 +6,13 @@
  Desugaring foreign declarations (see also DsCCall).
  
  \begin{code}
 -module DsForeign ( dsForeigns ) where
-+{-# LANGUAGE TypeFamilies #-}
-+
 +module DsForeign ( dsForeigns
 +                 , dsForeigns'
-+                 , DsForeignsHook (..)
 +                 , dsFImport, dsCImport, dsFCall, dsPrimCall
 +                 , dsFExport, dsFExportDynamic, mkFExportCBits
 +                 , toCType
@@ -20,33 +50,20 @@ index 1053b91..90ae698 100644
  
  #include "HsVersions.h"
  import TcRnMonad        -- temp
-@@ -30,6 +39,7 @@ import TyCon
- import Coercion
- import TcEnv
- import TcType
+@@ -48,6 +54,7 @@ import Config
+ import OrdList
+ import Pair
+ import Util
 +import Hooks
- 
- import CmmExpr
- import CmmUtils
-@@ -51,6 +61,7 @@ import Util
  
  import Data.Maybe
  import Data.List
-+import Data.Typeable (Typeable)
- \end{code}
+@@ -72,9 +79,13 @@ type Binding = (Id, CoreExpr)   -- No rec/nonrec structure;
  
- Desugaring of @foreign@ declarations is naturally split up into
-@@ -70,11 +81,18 @@ so we reuse the desugaring code in @DsCCall@ to deal with these.
- type Binding = (Id, CoreExpr)   -- No rec/nonrec structure;
-                                 -- the occurrence analyser will sort it all out
- 
-+data DsForeignsHook = DsForeignsHook deriving Typeable
-+type instance Hook DsForeignsHook = [LForeignDecl Id] -> DsM (ForeignStubs, OrdList Binding)
-+
  dsForeigns :: [LForeignDecl Id]
             -> DsM (ForeignStubs, OrdList Binding)
 -dsForeigns []
-+dsForeigns fos = getHooked DsForeignsHook dsForeigns' >>= ($ fos)
++dsForeigns fos = getHooked dsForeignsHook dsForeigns' >>= ($ fos)
 +
 +dsForeigns' :: [LForeignDecl Id]
 +            -> DsM (ForeignStubs, OrdList Binding)
@@ -57,21 +74,27 @@ index 1053b91..90ae698 100644
      fives <- mapM do_ldecl fos
      let
          (hs, cs, idss, bindss) = unzip4 fives
+diff --git a/compiler/deSugar/DsMonad.lhs-boot b/compiler/deSugar/DsMonad.lhs-boot
+index e69de29..2c6b128 100644
+--- a/compiler/deSugar/DsMonad.lhs-boot
++++ b/compiler/deSugar/DsMonad.lhs-boot
+@@ -0,0 +1,10 @@
++\begin{code}
++module DsMonad (DsM) where
++
++import TcRnTypes
++
++data DsGblEnv
++data DsLclEnv
++type DsM result = TcRnIf DsGblEnv DsLclEnv result
++
++\end{code}
+\ No newline at end of file
 diff --git a/compiler/ghc.cabal.in b/compiler/ghc.cabal.in
-index bfcbb87..a256901 100644
+index 553d27d..b29bd25 100644
 --- a/compiler/ghc.cabal.in
 +++ b/compiler/ghc.cabal.in
-@@ -58,6 +58,9 @@ Library
-     if flag(stage1) && impl(ghc < 7.5)
-         Build-Depends: old-time   >= 1   && < 1.2
- 
-+    if !flag(stage1)
-+        Build-Depends: ghc-prim
-+
-     if os(windows)
-         Build-Depends: Win32
-     else
-@@ -134,6 +137,7 @@ Library
+@@ -134,6 +134,7 @@ Library
          Demand
          Exception
          GhcMonad
@@ -79,105 +102,96 @@ index bfcbb87..a256901 100644
          Id
          IdInfo
          Literal
+@@ -276,6 +277,7 @@ Library
+         Constants
+         DriverMkDepend
+         DriverPhases
++        PipelineMonad
+         DriverPipeline
+         DynFlags
+         ErrUtils
 diff --git a/compiler/ghc.mk b/compiler/ghc.mk
-index 1149fbd..eb1df1e 100644
+index 66548b6..2dfcebd 100644
 --- a/compiler/ghc.mk
 +++ b/compiler/ghc.mk
-@@ -436,7 +436,7 @@ compiler_stage3_SplitObjs = NO
- # We therefore need to split some of the modules off into a separate
+@@ -446,7 +446,7 @@ compiler_stage3_SplitObjs = NO
  # DLL. This clump are the modules reachable from DynFlags:
  compiler_stage2_dll0_START_MODULE = DynFlags
--compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes Binary Bitmap BlockId BreakArray BufWrite ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Fingerprint FiniteMap ForeignCall Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes Id IdInfo IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcType TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
-+compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes Binary Bitmap BlockId BreakArray BufWrite ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Fingerprint FiniteMap ForeignCall Hooks Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes Id IdInfo IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcType TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
+ 
+-compiler_stage2_dll0_MODULES =Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
++compiler_stage2_dll0_MODULES =Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DsMonad DynFlags Encoding ErrUtils Exception FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hooks Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic PipelineMonad Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
  
  compiler_stage2_dll0_HS_OBJS = \
      $(patsubst %,compiler/stage2/build/%.$(dyn_osuf),$(subst .,/,$(compiler_stage2_dll0_MODULES)))
+diff --git a/compiler/ghci/ByteCodeLink.lhs b/compiler/ghci/ByteCodeLink.lhs
+index 06421dc..4c48409 100644
+--- a/compiler/ghci/ByteCodeLink.lhs
++++ b/compiler/ghci/ByteCodeLink.lhs
+@@ -8,7 +8,6 @@ ByteCodeLink: Bytecode assembler and linker
+ {-# OPTIONS -optc-DNON_POSIX_SOURCE #-}
+ 
+ module ByteCodeLink (
+-        HValue,
+         ClosureEnv, emptyClosureEnv, extendClosureEnv,
+         linkBCO, lookupStaticPtr, lookupName
+        ,lookupIE
+@@ -21,6 +20,7 @@ import ByteCodeAsm
+ import ObjLink
+ 
+ import DynFlags
++import BasicTypes
+ import Name
+ import NameEnv
+ import PrimOp
+@@ -52,7 +52,6 @@ import GHC.Ptr          ( castPtr )
+ 
+ \begin{code}
+ type ClosureEnv = NameEnv (Name, HValue)
+-newtype HValue = HValue Any
+ 
+ emptyClosureEnv :: ClosureEnv
+ emptyClosureEnv = emptyNameEnv
+diff --git a/compiler/ghci/ByteCodeLink.lhs-boot b/compiler/ghci/ByteCodeLink.lhs-boot
+deleted file mode 100644
+index 2b78c36..0000000
+--- a/compiler/ghci/ByteCodeLink.lhs-boot
++++ /dev/null
+@@ -1,3 +0,0 @@
+->module ByteCodeLink where
+->
+->data HValue
 diff --git a/compiler/ghci/Linker.lhs b/compiler/ghci/Linker.lhs
-index 192df2e..d322eae 100644
+index 192df2e..edc0db1 100644
 --- a/compiler/ghci/Linker.lhs
 +++ b/compiler/ghci/Linker.lhs
-@@ -8,6 +8,7 @@
- -- calling the object-code linker and the byte-code linker where
- -- necessary.
- 
-+{-# LANGUAGE TypeFamilies #-}
+@@ -11,7 +11,7 @@
  {-# OPTIONS -fno-cse #-}
  -- -fno-cse is needed for GLOBAL_VAR's to behave properly
  
-@@ -18,7 +19,10 @@ module Linker ( HValue, getHValue, showLinkerState,
-                 linkPackages,initDynLinker,linkModule,
+-module Linker ( HValue, getHValue, showLinkerState,
++module Linker ( getHValue, showLinkerState,
+                 linkExpr, linkDecls, unload, withExtendedLinkEnv,
+                 extendLinkEnv, deleteFromLinkEnv,
+                 extendLoadedPkgs,
+diff --git a/compiler/ghci/RtClosureInspect.hs b/compiler/ghci/RtClosureInspect.hs
+index 746a547..9a5edbd 100644
+--- a/compiler/ghci/RtClosureInspect.hs
++++ b/compiler/ghci/RtClosureInspect.hs
+@@ -35,8 +35,8 @@ module RtClosureInspect(
+ import DebuggerUtils
+ import ByteCodeItbls    ( StgInfoTable, peekItbl )
+ import qualified ByteCodeItbls as BCI( StgInfoTable(..) )
++import BasicTypes       ( HValue )
+ import HscTypes
+-import Linker
  
-                 -- Saving/restoring globals
--                PersistentLinkerState, saveLinkerGlobals, restoreLinkerGlobals
-+                PersistentLinkerState, saveLinkerGlobals, restoreLinkerGlobals,
-+                -- Hook for customizing library locations
-+                LocateLibHook(..), locateLib', LibrarySpec(..),
-+                searchForLibUsingGcc
-         ) where
- 
- #include "HsVersions.h"
-@@ -53,15 +57,17 @@ import Config
- import Platform
- import SysTools
- import PrelNames
-+import Hooks
- 
- -- Standard libraries
- import Control.Monad
- 
- import Data.IORef
- import Data.List
-+import Data.Maybe (fromMaybe)
- import qualified Data.Map as Map
- import Control.Concurrent.MVar
--
-+import Data.Typeable (Typeable)
- import System.FilePath
- import System.IO
- #if __GLASGOW_HASKELL__ > 704
-@@ -1170,8 +1176,16 @@ loadFrameworks platform pkg
- -- which generally means that it should be a dynamic library in the
- -- standard system search path.
- 
-+data LocateLibHook = LocateLibHook deriving Typeable
-+type instance Hook LocateLibHook =
-+  DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
-+
- locateLib :: DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
--locateLib dflags is_hs dirs lib
-+locateLib dflags = (fromMaybe locateLib' $
-+  lookupHook LocateLibHook (hooks dflags)) dflags
-+
-+locateLib' :: DynFlags -> Bool -> [FilePath] -> String -> IO LibrarySpec
-+locateLib' dflags is_hs dirs lib
-   | not is_hs
-     -- For non-Haskell libraries (e.g. gmp, iconv):
-     --   first look in library-dirs for a dynamic library (libfoo.so)
+ import DataCon
+ import Type
 diff --git a/compiler/iface/LoadIface.lhs b/compiler/iface/LoadIface.lhs
-index ac0b09c..8bcdd37 100644
+index ac0b09c..0fc8e68 100644
 --- a/compiler/iface/LoadIface.lhs
 +++ b/compiler/iface/LoadIface.lhs
-@@ -7,6 +7,8 @@ Loading interface files
- 
- \begin{code}
- {-# OPTIONS_GHC -fno-warn-orphans #-}
-+{-# LANGUAGE TypeFamilies #-}
-+
- module LoadIface (
-         -- RnM/TcM functions
-         loadModuleInterface, loadModuleInterfaces, 
-@@ -19,7 +21,9 @@ module LoadIface (
-         loadDecls,      -- Should move to TcIface and be renamed
-         initExternalPackageState,
- 
--        ifaceStats, pprModIface, showIface
-+        ifaceStats, pprModIface, showIface,
-+
-+        GhcPrimIfaceHook (..)
-    ) where
- 
- #include "HsVersions.h"
-@@ -59,9 +63,11 @@ import Panic
+@@ -59,6 +59,7 @@ import Panic
  import Util
  import FastString
  import Fingerprint
@@ -185,71 +199,49 @@ index ac0b09c..8bcdd37 100644
  
  import Control.Monad
  import Data.IORef
-+import Data.Typeable
- import System.FilePath
- \end{code}
- 
-@@ -494,7 +500,13 @@ bumpDeclStats name
- %*                                                      *
- %*********************************************************
- 
-+
-+
- \begin{code}
-+
-+data GhcPrimIfaceHook = GhcPrimIfaceHook deriving Typeable
-+type instance Hook GhcPrimIfaceHook = ModIface
-+
- findAndReadIface :: SDoc -> Module
-                  -> IsBootInterface     -- True  <=> Look for a .hi-boot file
-                                         -- False <=> Look for .hi file
-@@ -516,7 +528,9 @@ findAndReadIface doc_str mod hi_boot_file
+@@ -516,7 +517,9 @@ findAndReadIface doc_str mod hi_boot_file
  
         -- Check for GHC.Prim, and return its static interface
         if mod == gHC_PRIM
 -           then return (Succeeded (ghcPrimIface,
 +           then do
-+               iface <- getHooked GhcPrimIfaceHook ghcPrimIface
++               iface <- getHooked ghcPrimIfaceHook ghcPrimIface
 +               return (Succeeded (iface,
                                     "<built in interface for GHC.Prim>"))
             else do
                 dflags <- getDynFlags
 diff --git a/compiler/main/DriverPipeline.hs b/compiler/main/DriverPipeline.hs
-index 7c5bc90..53aedbb 100644
+index a6567c8..356dec4 100644
 --- a/compiler/main/DriverPipeline.hs
 +++ b/compiler/main/DriverPipeline.hs
-@@ -1,5 +1,5 @@
- {-# OPTIONS -fno-cse #-}
--{-# LANGUAGE NamedFieldPuns #-}
-+{-# LANGUAGE NamedFieldPuns, TypeFamilies #-}
- -- -fno-cse is needed for GLOBAL_VAR's to behave properly
- 
- -----------------------------------------------------------------------------
-@@ -23,6 +23,15 @@ module DriverPipeline (
+@@ -23,17 +23,26 @@ module DriverPipeline (
     compileOne, compileOne',
     link,
  
-+        -- Hook to override behaviour for each phase
-+   RunPhaseHook(..),
++        -- Exports for hooks to override runPhase and link
 +   PhasePlus(..), CompPipeline(..), PipeEnv(..), PipeState(..),
 +   phaseOutputFilename, getPipeState, getPipeEnv,
 +   hscPostBackendPhase, getLocation, setModLocation, setDynFlags,
-+   runPhase,
-+   LinkBinaryHook(..), linkBinary'', exeFileName,
++   runPhase, exeFileName,
 +   mkExtraObjToLinkIntoBinary, mkNoteObjsToLinkIntoBinary,
-+   maybeCreateManifest, runPhase_MoveBinary
++   maybeCreateManifest, runPhase_MoveBinary,
++   linkingNeeded, checkLinkInfo
    ) where
  
  #include "HsVersions.h"
-@@ -31,7 +40,7 @@ import Packages
+ 
++import PipelineMonad
+ import Packages
  import HeaderInfo
  import DriverPhases
  import SysTools
--import HscMain
-+import HscMain hiding ( Hsc )
+ import HscMain
  import Finder
- import HscTypes
+-import HscTypes
++import HscTypes hiding ( Hsc )
  import Outputable
+ import Module
+ import UniqFM           ( eltsUFM )
 @@ -52,6 +61,7 @@ import LlvmCodeGen      ( llvmFixupAsm )
  import MonadUtils
  import Platform
@@ -258,15 +250,152 @@ index 7c5bc90..53aedbb 100644
  
  import Exception
  import Data.IORef       ( readIORef )
-@@ -61,6 +71,7 @@ import System.IO
- import Control.Monad
- import Data.List        ( isSuffixOf )
- import Data.Maybe
-+import Data.Typeable    ( Typeable )
- import System.Environment
- import Data.Char
+@@ -283,23 +293,26 @@ link :: GhcLink                 -- interactive or batch
+ -- exports main, i.e., we have good reason to believe that linking
+ -- will succeed.
  
-@@ -728,7 +739,7 @@ pipeLoop phase input_fn = do
+-link LinkInMemory _ _ _
+-    = if cGhcWithInterpreter == "YES"
+-      then -- Not Linking...(demand linker will do the job)
+-           return Succeeded
+-      else panicBadLink LinkInMemory
++link ghcLink dflags
++  = lookupHook linkHook l dflags ghcLink dflags
++  where
++    l LinkInMemory _ _ _
++      = if cGhcWithInterpreter == "YES"
++        then -- Not Linking...(demand linker will do the job)
++             return Succeeded
++        else panicBadLink LinkInMemory
+ 
+-link NoLink _ _ _
+-   = return Succeeded
++    l NoLink _ _ _
++      = return Succeeded
+ 
+-link LinkBinary dflags batch_attempt_linking hpt
+-   = link' dflags batch_attempt_linking hpt
++    l LinkBinary dflags batch_attempt_linking hpt
++      = link' dflags batch_attempt_linking hpt
+ 
+-link LinkStaticLib dflags batch_attempt_linking hpt
+-   = link' dflags batch_attempt_linking hpt
++    l LinkStaticLib dflags batch_attempt_linking hpt
++      = link' dflags batch_attempt_linking hpt
+ 
+-link LinkDynLib dflags batch_attempt_linking hpt
+-   = link' dflags batch_attempt_linking hpt
++    l LinkDynLib dflags batch_attempt_linking hpt
++      = link' dflags batch_attempt_linking hpt
+ 
+ panicBadLink :: GhcLink -> a
+ panicBadLink other = panic ("link: GHC not built to link this way: " ++
+@@ -499,20 +512,6 @@ doLink dflags stop_phase o_files
+ 
+ -- ---------------------------------------------------------------------------
+ 
+-data PipelineOutput
+-  = Temporary
+-        -- ^ Output should be to a temporary file: we're going to
+-        -- run more compilation steps on this output later.
+-  | Persistent
+-        -- ^ We want a persistent file, i.e. a file in the current directory
+-        -- derived from the input filename, but with the appropriate extension.
+-        -- eg. in "ghc -c Foo.hs" the output goes into ./Foo.o.
+-  | SpecificFile
+-        -- ^ The output must go into the specific outputFile in DynFlags.
+-        -- We don't store the filename in the constructor as it changes
+-        -- when doing -dynamic-too.
+-    deriving Show
+-
+ -- | Run a compilation pipeline, consisting of multiple phases.
+ --
+ -- This is the interface to the compilation pipeline, which runs
+@@ -615,83 +614,6 @@ runPipeline' start_phase hsc_env env input_fn
+ 
+   evalP (pipeLoop start_phase input_fn) env state
+ 
+--- -----------------------------------------------------------------------------
+--- The pipeline uses a monad to carry around various bits of information
+-
+--- PipeEnv: invariant information passed down
+-data PipeEnv = PipeEnv {
+-       pe_isHaskellishFile :: Bool,
+-       stop_phase   :: Phase,       -- ^ Stop just before this phase
+-       src_filename :: String,      -- ^ basename of original input source
+-       src_basename :: String,      -- ^ basename of original input source
+-       src_suffix   :: String,      -- ^ its extension
+-       output_spec  :: PipelineOutput -- ^ says where to put the pipeline output
+-  }
+-
+--- PipeState: information that might change during a pipeline run
+-data PipeState = PipeState {
+-       hsc_env   :: HscEnv,
+-          -- ^ only the DynFlags change in the HscEnv.  The DynFlags change
+-          -- at various points, for example when we read the OPTIONS_GHC
+-          -- pragmas in the Cpp phase.
+-       maybe_loc :: Maybe ModLocation,
+-          -- ^ the ModLocation.  This is discovered during compilation,
+-          -- in the Hsc phase where we read the module header.
+-       maybe_stub_o :: Maybe FilePath
+-          -- ^ the stub object.  This is set by the Hsc phase if a stub
+-          -- object was created.  The stub object will be joined with
+-          -- the main compilation object using "ld -r" at the end.
+-  }
+-
+-getPipeEnv :: CompPipeline PipeEnv
+-getPipeEnv = P $ \env state -> return (state, env)
+-
+-getPipeState :: CompPipeline PipeState
+-getPipeState = P $ \_env state -> return (state, state)
+-
+-instance HasDynFlags CompPipeline where
+-    getDynFlags = P $ \_env state -> return (state, hsc_dflags (hsc_env state))
+-
+-setDynFlags :: DynFlags -> CompPipeline ()
+-setDynFlags dflags = P $ \_env state ->
+-  return (state{hsc_env= (hsc_env state){ hsc_dflags = dflags }}, ())
+-
+-setModLocation :: ModLocation -> CompPipeline ()
+-setModLocation loc = P $ \_env state ->
+-  return (state{ maybe_loc = Just loc }, ())
+-
+-setStubO :: FilePath -> CompPipeline ()
+-setStubO stub_o = P $ \_env state ->
+-  return (state{ maybe_stub_o = Just stub_o }, ())
+-
+-newtype CompPipeline a = P { unP :: PipeEnv -> PipeState -> IO (PipeState, a) }
+-
+-evalP :: CompPipeline a -> PipeEnv -> PipeState -> IO a
+-evalP f env st = liftM snd $ unP f env st
+-
+-instance Functor CompPipeline where
+-    fmap = liftM
+-
+-instance Applicative CompPipeline where
+-    pure = return
+-    (<*>) = ap
+-
+-instance Monad CompPipeline where
+-  return a = P $ \_env state -> return (state, a)
+-  P m >>= k = P $ \env state -> do (state',a) <- m env state
+-                                   unP (k a) env state'
+-
+-instance MonadIO CompPipeline where
+-    liftIO m = P $ \_env state -> do a <- m; return (state, a)
+-
+-phaseOutputFilename :: Phase{-next phase-} -> CompPipeline FilePath
+-phaseOutputFilename next_phase = do
+-  PipeEnv{stop_phase, src_basename, output_spec} <- getPipeEnv
+-  PipeState{maybe_loc, hsc_env} <- getPipeState
+-  let dflags = hsc_dflags hsc_env
+-  liftIO $ getOutputFilename stop_phase output_spec
+-                             src_basename dflags next_phase maybe_loc
+-
+ -- ---------------------------------------------------------------------------
+ -- outer pipeline loop
+ 
+@@ -735,7 +657,7 @@ pipeLoop phase input_fn = do
     _
       -> do liftIO $ debugTraceMsg dflags 4
                                    (ptext (sLit "Running phase") <+> ppr phase)
@@ -275,133 +404,201 @@ index 7c5bc90..53aedbb 100644
             r <- pipeLoop next_phase output_fn
             case phase of
                 HscOut {} ->
-@@ -741,6 +752,15 @@ pipeLoop phase input_fn = do
+@@ -748,11 +670,24 @@ pipeLoop phase input_fn = do
                     return ()
             return r
  
-+data RunPhaseHook = RunPhaseHook deriving (Typeable)
-+type instance Hook RunPhaseHook =
-+  PhasePlus -> FilePath -> DynFlags -> CompPipeline (PhasePlus, FilePath)
-+
 +runHookedPhase :: PhasePlus -> FilePath -> DynFlags 
 +               -> CompPipeline (PhasePlus, FilePath)
 +runHookedPhase pp input dflags =
-+  fromMaybe runPhase (lookupHook RunPhaseHook $ hooks dflags) pp input dflags
++  lookupHook runPhaseHook runPhase dflags pp input dflags
 +
  -- -----------------------------------------------------------------------------
  -- In each phase, we need to know into what filename to generate the
  -- output.  All the logic about which filenames we generate output
-@@ -1781,8 +1801,17 @@ getHCFilePackages filename =
- linkBinary :: DynFlags -> [FilePath] -> [PackageId] -> IO ()
- linkBinary = linkBinary' False
+ -- into is embodied in the following function.
  
-+data LinkBinaryHook = LinkBinaryHook deriving Typeable
-+type instance Hook LinkBinaryHook =
-+  Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
++phaseOutputFilename :: Phase{-next phase-} -> CompPipeline FilePath
++phaseOutputFilename next_phase = do
++  PipeEnv{stop_phase, src_basename, output_spec} <- getPipeEnv
++  PipeState{maybe_loc, hsc_env} <- getPipeState
++  let dflags = hsc_dflags hsc_env
++  liftIO $ getOutputFilename stop_phase output_spec
++                             src_basename dflags next_phase maybe_loc
 +
- linkBinary' :: Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
--linkBinary' staticLink dflags o_files dep_packages = do
-+linkBinary' staticLink dflags =
-+  fromMaybe linkBinary'' (lookupHook LinkBinaryHook $ hooks dflags)
-+    staticLink dflags
-+
-+linkBinary'' :: Bool -> DynFlags -> [FilePath] -> [PackageId] -> IO ()
-+linkBinary'' staticLink dflags o_files dep_packages = do
-     let platform = targetPlatform dflags
-         mySettings = settings dflags
-         verbFlags = getVerbFlags dflags
+ getOutputFilename
+   :: Phase -> PipelineOutput -> String
+   -> DynFlags -> Phase{-next phase-} -> Maybe ModLocation -> IO FilePath
+@@ -801,13 +736,6 @@ getOutputFilename stop_phase output basename dflags next_phase maybe_location
+              | Just d <- odir = d </> persistent
+              | otherwise      = persistent
+ 
+-data PhasePlus = RealPhase Phase
+-               | HscOut HscSource ModuleName HscStatus
+-
+-instance Outputable PhasePlus where
+-    ppr (RealPhase p) = ppr p
+-    ppr (HscOut {}) = text "HscOut"
+-
+ -- -----------------------------------------------------------------------------
+ -- | Each phase in the pipeline returns the next phase to execute, and the
+ -- name of the file in which the output was placed.
 diff --git a/compiler/main/DynFlags.hs b/compiler/main/DynFlags.hs
-index 88668cb..d35b676 100644
+index ada18b5..afb0da4 100644
 --- a/compiler/main/DynFlags.hs
 +++ b/compiler/main/DynFlags.hs
-@@ -11,6 +11,7 @@
- --
- -------------------------------------------------------------------------------
+@@ -167,6 +167,7 @@ import Control.Monad
  
-+{-# LANGUAGE FlexibleContexts #-}
- {-# OPTIONS -fno-cse #-}
- -- -fno-cse is needed for GLOBAL_VAR's to behave properly
- 
-@@ -35,6 +36,7 @@ module DynFlags (
-         dynamicTooMkDynamicDynFlags,
-         DynFlags(..),
-         HasDynFlags(..), ContainsDynFlags(..),
-+        getHooked,
-         RtsOptsEnabled(..),
-         HscTarget(..), isObjectTarget, defaultObjectTarget,
-         targetRetainsAllBindings,
-@@ -160,6 +162,7 @@ import Outputable
- import Foreign.C        ( CInt(..) )
- #endif
- import {-# SOURCE #-} ErrUtils ( Severity(..), MsgDoc, mkLocMessage )
-+import Hooks
- 
- import System.IO.Unsafe ( unsafePerformIO )
- import Data.IORef
-@@ -174,6 +177,7 @@ import qualified Data.Map as Map
- import Data.Maybe
- import Data.Set (Set)
- import qualified Data.Set as Set
-+import Data.Typeable
- import Data.Word
- import System.FilePath
- import System.IO
-@@ -665,6 +669,8 @@ data DynFlags = DynFlags {
-   -- Plugins
+ import Data.Bits
+ import Data.Char
++import Data.Dynamic
+ import Data.Int
+ import Data.List
+ import Data.Map (Map)
+@@ -670,6 +671,11 @@ data DynFlags = DynFlags {
    pluginModNames        :: [ModuleName],
    pluginModNameOpts     :: [(ModuleName,String)],
-+  hooks                 :: Hooks,
-+
  
++  -- The hooks field is Dynamic since we cannot let DynFlags depend
++  -- on the Hooks module, this would break the DLL split on Windows
++  hooks                 :: Dynamic,
++
++
    --  For ghc -M
    depMakefile           :: FilePath,
-@@ -768,6 +774,9 @@ data DynFlags = DynFlags {
- class HasDynFlags m where
-     getDynFlags :: m DynFlags
- 
-+getHooked :: (Functor f, HasDynFlags f, Typeable a) => a -> Hook a -> f (Hook a)
-+getHooked x def = fmap (fromMaybe def . lookupHook x . hooks) getDynFlags
-+
- class ContainsDynFlags t where
-     extractDynFlags :: t -> DynFlags
-     replaceDynFlags :: t -> DynFlags -> t
-@@ -1304,6 +1313,7 @@ defaultDynFlags mySettings =
+   depIncludePkgDeps     :: Bool,
+@@ -1313,6 +1319,7 @@ defaultDynFlags mySettings =
  
          pluginModNames          = [],
          pluginModNameOpts       = [],
-+        hooks                   = emptyHooks,
++        hooks                   = toDyn (),
  
          outputFile              = Nothing,
          dynOutputFile           = Nothing,
+diff --git a/compiler/main/DynamicLoading.hs b/compiler/main/DynamicLoading.hs
+index 889a09d..f262212 100644
+--- a/compiler/main/DynamicLoading.hs
++++ b/compiler/main/DynamicLoading.hs
+@@ -11,6 +11,7 @@ module DynamicLoading (
+         
+         -- * Loading values
+         getValueSafely,
++        getHValueSafely,
+         lessUnsafeCoerce
+ #endif
+     ) where
+@@ -29,6 +30,7 @@ import PrelNames        ( iNTERACTIVE )
+ import DynFlags
+ 
+ import HscTypes         ( HscEnv(..), FindResult(..), ModIface(..), lookupTypeHscEnv )
++import BasicTypes       ( HValue )
+ import TypeRep          ( TyThing(..), pprTyThingCategory )
+ import Type             ( Type, eqType )
+ import TyCon            ( TyCon )
+@@ -40,6 +42,7 @@ import FastString
+ import ErrUtils
+ import Outputable
+ import Exception
++import Hooks
+ 
+ import Data.Maybe        ( mapMaybe )
+ import GHC.Exts          ( unsafeCoerce# )
+@@ -86,8 +89,18 @@ forceLoadTyCon hsc_env con_name = do
+ 
+ getValueSafely :: HscEnv -> Name -> Type -> IO (Maybe a)
+ getValueSafely hsc_env val_name expected_type = do
+-    forceLoadNameModuleInterface hsc_env (ptext (sLit "contains a name used in an invocation of getValueSafely")) val_name
+-    
++  mb_hval <- lookupHook getValueSafelyHook getHValueSafely dflags hsc_env val_name expected_type
++  case mb_hval of
++    Nothing   -> return Nothing
++    Just hval -> do
++      value <- lessUnsafeCoerce dflags "getValueSafely" hval
++      return (Just value)
++  where
++    dflags = hsc_dflags hsc_env
++
++getHValueSafely :: HscEnv -> Name -> Type -> IO (Maybe HValue)
++getHValueSafely hsc_env val_name expected_type = do
++    forceLoadNameModuleInterface hsc_env (ptext (sLit "contains a name used in an invocation of getHValueSafely")) val_name
+     -- Now look up the names for the value and type constructor in the type environment
+     mb_val_thing <- lookupTypeHscEnv hsc_env val_name
+     case mb_val_thing of
+@@ -104,12 +117,10 @@ getValueSafely hsc_env val_name expected_type = do
+                     Nothing ->  return ()
+                 -- Find the value that we just linked in and cast it given that we have proved it's type
+                 hval <- getHValue hsc_env val_name
+-                value <- lessUnsafeCoerce (hsc_dflags hsc_env) "getValueSafely" hval
+-                return $ Just value
++                return (Just hval)
+              else return Nothing
+         Just val_thing -> throwCmdLineErrorS dflags $ wrongTyThingError val_name val_thing
+-  where dflags = hsc_dflags hsc_env
+-
++   where dflags = hsc_dflags hsc_env
+ 
+ -- | Coerce a value as usual, but:
+ --
+diff --git a/compiler/main/GHC.hs b/compiler/main/GHC.hs
+index 39e1e0a..a54185b 100644
+--- a/compiler/main/GHC.hs
++++ b/compiler/main/GHC.hs
+@@ -254,7 +254,6 @@ module GHC (
+ #include "HsVersions.h"
+ 
+ #ifdef GHCI
+-import Linker           ( HValue )
+ import ByteCodeInstr
+ import BreakArray
+ import InteractiveEval
 diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
-index e69de29..1195600 100644
+index e69de29..db2df18 100644
 --- a/compiler/main/Hooks.lhs
 +++ b/compiler/main/Hooks.lhs
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,89 @@
 +\section[Hooks]{Low level API hooks}
 +
 +\begin{code}
-+{-# LANGUAGE TypeFamilies, FlexibleContexts, CPP #-}
-+
 +module Hooks ( Hooks
-+             , Hook
-+             , lookupHook
 +             , emptyHooks
-+#if STAGE > 1
-+             , insertHook
-+             , insertWithHook
-+             , deleteHook
-+#endif
++             , lookupHook
++             , getHooked
++             , setHooks
++             , getHooks
++               -- the hooks:
++             , dsForeignsHook
++             , tcForeignImportsHook
++             , tcForeignExportsHook
++             , hscFrontendHook
++             , hscCompileOneShotHook
++             , hscCompileCoreExprHook
++             , ghcPrimIfaceHook
++             , runPhaseHook
++             , linkHook
++             , runQuasiQuoteHook
++             , getValueSafelyHook
 +             ) where
 +
-+import           Data.Typeable
++import DynFlags
++import HsTypes
++import Name
++import PipelineMonad
++import HscTypes
++import HsDecls
++import HsBinds
++import {-# SOURCE #-} DsMonad
++import OrdList
++import Id
++import TcRnTypes
++import Bag
++import RdrName
++import CoreSyn
++import BasicTypes
++import Type
++import SrcLoc
 +
-+#if STAGE > 1
-+import           Unsafe.Coerce
-+import qualified Data.Map as M
-+import           GHC.Prim (Any)
-+#endif
-+
++import Data.Dynamic
++import Data.Maybe
 +\end{code}
 +
 +%************************************************************************
@@ -416,70 +613,62 @@ index e69de29..1195600 100644
 +--   the compiler pipeline. If a hook is not installed, GHC
 +--   uses the default built-in behaviour
 +
-+type family Hook a :: *
-+
-+#if STAGE > 1
-+insertHook :: Typeable a => a -> Hook a -> Hooks -> Hooks
-+insertHook tag hook (Hooks m) =
-+  Hooks (M.insert (typeOf tag) (unsafeCoerce hook) m)
-+
-+insertWithHook :: Typeable a => (Hook a -> Hook a -> Hook a)
-+               -> a -> Hook a -> Hooks -> Hooks
-+insertWithHook f tag hook h =
-+  insertHook tag (maybe hook (f hook) $ lookupHook tag h) h
-+
-+deleteHook :: Typeable a  => a -> Hooks -> Hooks
-+deleteHook tag (Hooks m) = Hooks (M.delete (typeOf tag) m)
-+
-+lookupHook :: Typeable a => a -> Hooks -> Maybe (Hook a)
-+lookupHook tag (Hooks m) =
-+  fmap unsafeCoerce (M.lookup (typeOf tag) m)
-+
-+newtype Hooks = Hooks (M.Map TypeRep Any)
-+
 +emptyHooks :: Hooks
-+emptyHooks = Hooks M.empty
-+#else
-+lookupHook :: Typeable a => a -> Hooks -> Maybe (Hook a)
-+lookupHook _ _ = Nothing
++emptyHooks = Hooks Nothing Nothing Nothing Nothing Nothing Nothing
++                   Nothing Nothing Nothing Nothing Nothing
 +
 +data Hooks = Hooks
++  { dsForeignsHook         :: Maybe ([LForeignDecl Id] -> DsM (ForeignStubs, OrdList (Id, CoreExpr)))
++  , tcForeignImportsHook   :: Maybe ([LForeignDecl Name] -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt))
++  , tcForeignExportsHook   :: Maybe ([LForeignDecl Name] -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt))
++  , hscFrontendHook        :: Maybe (ModSummary -> Hsc TcGblEnv)
++  , hscCompileOneShotHook  :: Maybe (HscEnv -> FilePath -> ModSummary -> SourceModified -> IO HscStatus)
++  , hscCompileCoreExprHook :: Maybe (HscEnv -> SrcSpan -> CoreExpr -> IO HValue)
++  , ghcPrimIfaceHook       :: Maybe ModIface
++  , runPhaseHook           :: Maybe (PhasePlus -> FilePath -> DynFlags -> CompPipeline (PhasePlus, FilePath))
++  , linkHook               :: Maybe (GhcLink -> DynFlags -> Bool -> HomePackageTable -> IO SuccessFlag)
++  , runQuasiQuoteHook      :: Maybe (HsQuasiQuote Name -> RnM (HsQuasiQuote Name))
++  , getValueSafelyHook     :: Maybe (HscEnv -> Name -> Type -> IO (Maybe HValue))
++  } deriving Typeable
 +
-+emptyHooks :: Hooks
-+emptyHooks = Hooks
-+#endif
++getHooked :: (Functor f, HasDynFlags f) => (Hooks -> Maybe a) -> a -> f a
++getHooked hook def = fmap (lookupHook hook def) getDynFlags
 +
++lookupHook :: (Hooks -> Maybe a) -> a -> DynFlags -> a
++lookupHook hook def = fromMaybe def . hook . getHooks
++
++setHooks :: Hooks -> DynFlags -> DynFlags
++setHooks h dflags = dflags { hooks = toDyn h }
++
++getHooks :: DynFlags -> Hooks
++getHooks dflags = fromDyn (hooks dflags) emptyHooks
 +
 +\end{code}
 +
 diff --git a/compiler/main/HscMain.hs b/compiler/main/HscMain.hs
-index ad1b7c5..340cb23 100644
+index 774f5be..39e483e 100644
 --- a/compiler/main/HscMain.hs
 +++ b/compiler/main/HscMain.hs
-@@ -25,6 +25,7 @@
- -- (c) The GRASP/AQUA Project, Glasgow University, 1993-2000
- --
- -------------------------------------------------------------------------------
-+{-# LANGUAGE TypeFamilies #-}
- 
- module HscMain
-     (
-@@ -71,6 +72,14 @@ module HscMain
+@@ -70,11 +70,18 @@ module HscMain
+     , hscDecls, hscDeclsWithLocation
      , hscTcExpr, hscImport, hscKcType
      , hscCompileCoreExpr
++    -- * Low-level exports for hooks
++    , hscCompileCoreExpr'
  #endif
-+    -- * Hooks and low-level exports for hooks
-+    , Hsc(..), runHsc
 +    , hscParse', hscSimplify', hscDesugar', tcRnModule'
 +    , hscSimpleIface', hscNormalIface'
 +    , oneShotMsg
 +    , hscFileFrontEnd, genericHscFrontend, dumpIfaceStats
-+    , HscFrontendHook(..)
-+    , HscCompileOneShotHook(..)
      ) where
  
  #ifdef GHCI
-@@ -128,6 +137,7 @@ import NameSet          ( emptyNameSet )
+ import Id
++import BasicTypes       ( HValue )
+ import ByteCodeGen      ( byteCodeGen, coreExprToBCOs )
+ import Linker
+ import CoreTidy         ( tidyExpr )
+@@ -128,6 +135,7 @@ import NameSet          ( emptyNameSet )
  import InstEnv
  import FamInstEnv
  import Fingerprint      ( Fingerprint )
@@ -487,25 +676,76 @@ index ad1b7c5..340cb23 100644
  
  import DynFlags
  import ErrUtils
-@@ -152,6 +162,7 @@ import Data.Maybe
- import Data.IORef
- import System.FilePath as FilePath
- import System.Directory
-+import Data.Typeable ( Typeable )
+@@ -190,38 +198,6 @@ knownKeyNames =              -- where templateHaskellNames are defined
+ #endif
  
- #include "HsVersions.h"
+ -- -----------------------------------------------------------------------------
+--- The Hsc monad: Passing an enviornment and warning state
+-
+-newtype Hsc a = Hsc (HscEnv -> WarningMessages -> IO (a, WarningMessages))
+-
+-instance Functor Hsc where
+-    fmap = liftM
+-
+-instance Applicative Hsc where
+-    pure = return
+-    (<*>) = ap
+-
+-instance Monad Hsc where
+-    return a    = Hsc $ \_ w -> return (a, w)
+-    Hsc m >>= k = Hsc $ \e w -> do (a, w1) <- m e w
+-                                   case k a of
+-                                       Hsc k' -> k' e w1
+-
+-instance MonadIO Hsc where
+-    liftIO io = Hsc $ \_ w -> do a <- io; return (a, w)
+-
+-runHsc :: HscEnv -> Hsc a -> IO a
+-runHsc hsc_env (Hsc hsc) = do
+-    (a, w) <- hsc hsc_env emptyBag
+-    printOrThrowWarnings (hsc_dflags hsc_env) w
+-    return a
+-
+--- A variant of runHsc that switches in the DynFlags from the
+--- InteractiveContext before running the Hsc computation.
+---
+-runInteractiveHsc :: HscEnv -> Hsc a -> IO a
+-runInteractiveHsc hsc_env =
+-  runHsc (hsc_env { hsc_dflags = ic_dflags (hsc_IC hsc_env) })
  
-@@ -602,24 +613,45 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
-                     Just tc_result ->
+ getWarnings :: Hsc WarningMessages
+ getWarnings = Hsc $ \_ w -> return (w, w)
+@@ -235,9 +211,6 @@ logWarnings w = Hsc $ \_ w0 -> return ((), w0 `unionBags` w)
+ getHscEnv :: Hsc HscEnv
+ getHscEnv = Hsc $ \e w -> return (e, w)
+ 
+-instance HasDynFlags Hsc where
+-    getDynFlags = Hsc $ \e w -> return (hsc_dflags e, w)
+-
+ handleWarnings :: Hsc ()
+ handleWarnings = do
+     dflags <- getDynFlags
+@@ -527,13 +500,6 @@ This is the only thing that isn't caught by the type-system.
+ -}
+ 
+ 
+--- | Status of a compilation to hard-code
+-data HscStatus
+-    = HscNotGeneratingCode
+-    | HscUpToDate
+-    | HscUpdateBoot
+-    | HscRecomp CgGuts ModSummary
+-
+ type Messager = HscEnv -> (Int,Int) -> RecompileRequired -> ModSummary -> IO ()
+ 
+ genericHscCompileGetFrontendResult ::
+@@ -607,23 +573,35 @@ genericHscCompileGetFrontendResult always_do_basic_recompilation_check m_tc_resu
                          return $ Right (tc_result, mb_old_hash)
  
-+data HscFrontendHook = HscFrontendHook deriving Typeable
-+type instance Hook HscFrontendHook = ModSummary -> Hsc TcGblEnv
-+
  genericHscFrontend :: ModSummary -> Hsc TcGblEnv
 -genericHscFrontend mod_summary
 +genericHscFrontend mod_summary =
-+  getHooked HscFrontendHook genericHscFrontend' >>= ($ mod_summary)
++  getHooked hscFrontendHook genericHscFrontend' >>= ($ mod_summary)
 +
 +genericHscFrontend' :: ModSummary -> Hsc TcGblEnv
 +genericHscFrontend' mod_summary
@@ -520,11 +760,6 @@ index ad1b7c5..340cb23 100644
  --------------------------------------------------------------
  
 --- Compile Haskell, boot and extCore in OneShot mode.
-+data HscCompileOneShotHook =
-+  HscCompileOneShotHook deriving Typeable
-+type instance Hook HscCompileOneShotHook =
-+  HscEnv -> FilePath -> ModSummary -> SourceModified -> IO HscStatus
-+
  hscCompileOneShot :: HscEnv
                    -> FilePath
                    -> ModSummary
@@ -532,8 +767,7 @@ index ad1b7c5..340cb23 100644
                    -> IO HscStatus
 -hscCompileOneShot hsc_env extCore_filename mod_summary src_changed
 +hscCompileOneShot env =
-+  fromMaybe hscCompileOneShot'
-+    (lookupHook HscCompileOneShotHook . hooks . hsc_dflags $ env) env
++  lookupHook hscCompileOneShotHook hscCompileOneShot' (hsc_dflags env) env
 +
 +-- Compile Haskell, boot and extCore in OneShot mode.
 +hscCompileOneShot' :: HscEnv
@@ -545,169 +779,277 @@ index ad1b7c5..340cb23 100644
    = do
      -- One-shot mode needs a knot-tying mutable variable for interface
      -- files. See TcRnTypes.TcGblEnv.tcg_type_env_var.
-diff --git a/compiler/main/Packages.lhs b/compiler/main/Packages.lhs
-index fb832ff..97bb365 100644
---- a/compiler/main/Packages.lhs
-+++ b/compiler/main/Packages.lhs
-@@ -2,6 +2,7 @@
- % (c) The University of Glasgow, 2006
- %
- \begin{code}
-+{-# LANGUAGE TypeFamilies #-}
- -- | Package manipulation
- module Packages (
-         module PackageConfig,
-@@ -28,6 +29,9 @@ module Packages (
-         collectIncludeDirs, collectLibraryPaths, collectLinkOpts,
-         packageHsLibs,
+@@ -1616,7 +1594,11 @@ mkModGuts mod safe binds =
  
-+        -- * Hook for customizing library filenames
-+        PackageHsLibsHook(..), packageHsLibs',
+ #ifdef GHCI
+ hscCompileCoreExpr :: HscEnv -> SrcSpan -> CoreExpr -> IO HValue
+-hscCompileCoreExpr hsc_env srcspan ds_expr
++hscCompileCoreExpr hsc_env =
++  lookupHook hscCompileCoreExprHook hscCompileCoreExpr' (hsc_dflags hsc_env) hsc_env
 +
-         -- * Utils
-         isDllName
-     )
-@@ -45,6 +49,7 @@ import Util
- import Panic
- import Outputable
- import Maybes
-+import Hooks
- 
- import System.Environment ( getEnv )
- import Distribution.InstalledPackageInfo
-@@ -61,6 +66,7 @@ import Control.Monad
- import Data.Char (isSpace)
- import Data.List as List
- import Data.Map (Map)
-+import Data.Typeable ( Typeable )
- import qualified Data.Map as Map
- import qualified FiniteMap as Map
- import qualified Data.Set as Set
-@@ -881,8 +887,17 @@ collectLinkOpts dflags ps =
-         concatMap ldOptions ps
-     )
- 
-+data PackageHsLibsHook = PackageHsLibsHook deriving Typeable
-+type instance Hook PackageHsLibsHook
-+  = DynFlags -> PackageConfig -> [String]
++hscCompileCoreExpr' :: HscEnv -> SrcSpan -> CoreExpr -> IO HValue
++hscCompileCoreExpr' hsc_env srcspan ds_expr
+     | rtsIsProfiled
+     = throwIO (InstallationError "You can't call hscCompileCoreExpr in a profiled compiler")
+             -- Otherwise you get a seg-fault when you run it
+diff --git a/compiler/main/HscTypes.lhs b/compiler/main/HscTypes.lhs
+index 33dbba2..dd2e3de 100644
+--- a/compiler/main/HscTypes.lhs
++++ b/compiler/main/HscTypes.lhs
+@@ -12,6 +12,10 @@ module HscTypes (
+         FinderCache, FindResult(..), ModLocationCache,
+         Target(..), TargetId(..), pprTarget, pprTargetId,
+         ModuleGraph, emptyMG,
++        HscStatus(..),
 +
- packageHsLibs :: DynFlags -> PackageConfig -> [String]
--packageHsLibs dflags p = map (mkDynName . addSuffix) (hsLibraries p)
-+packageHsLibs dflags =
-+  fromMaybe packageHsLibs'
-+    (lookupHook PackageHsLibsHook $ hooks dflags) dflags
-+
-+packageHsLibs' :: DynFlags -> PackageConfig -> [String]
-+packageHsLibs' dflags p = map (mkDynName . addSuffix) (hsLibraries p)
-   where
-         ways0 = ways dflags
++        -- * Hsc monad
++        Hsc(..), runHsc, runInteractiveHsc, 
  
-diff --git a/compiler/main/SysTools.lhs b/compiler/main/SysTools.lhs
-index 78255b7..61e6810 100644
---- a/compiler/main/SysTools.lhs
-+++ b/compiler/main/SysTools.lhs
-@@ -7,6 +7,7 @@
- -----------------------------------------------------------------------------
- 
- \begin{code}
-+{-# LANGUAGE TypeFamilies #-}
- module SysTools (
-         -- Initialisation
-         initSysTools,
-@@ -40,8 +41,10 @@ module SysTools (
-         cleanTempDirs, cleanTempFiles, cleanTempFilesExcept,
-         addFilesToClean,
- 
--        Option(..)
-+        Option(..),
- 
-+        -- Hook for custom dynLib linking
-+        LinkDynLibHook(..), linkDynLib'
-  ) where
- 
- #include "HsVersions.h"
-@@ -57,6 +60,7 @@ import Platform
- import Util
+         -- * Information about modules
+         ModDetails(..), emptyModDetails,
+@@ -143,7 +147,7 @@ import DataCon
+ import PrelNames        ( gHC_PRIM, ioTyConName, printName )
+ import Packages hiding  ( Version(..) )
  import DynFlags
- import Exception
-+import Hooks
+-import DriverPhases
++import DriverPhases     ( Phase, HscSource(..), isHsBoot, hscSourceString )
+ import BasicTypes
+ import IfaceSyn
+ import CoreSyn          ( CoreRule, CoreVect )
+@@ -164,7 +168,7 @@ import ErrUtils
+ import Platform
+ import Util
  
+-import Control.Monad    ( mplus, guard, liftM, when )
++import Control.Monad    ( mplus, guard, liftM, when, ap )
+ import Data.Array       ( Array, array )
  import Data.IORef
- import Control.Monad
-@@ -68,6 +72,8 @@ import System.IO.Error as IO
- import System.Directory
- import Data.Char
- import Data.List
-+import Data.Maybe (fromMaybe)
-+import Data.Typeable
- import qualified Data.Map as Map
- import Text.ParserCombinators.ReadP hiding (char)
- import qualified Text.ParserCombinators.ReadP as R
-@@ -211,6 +217,7 @@ initSysTools mbMinusB
-                                    Just "NO" -> return False
-                                    Just xs -> pgmError ("Bad value for " ++ show key ++ ": " ++ show xs)
-                                    Nothing -> pgmError ("No entry for " ++ show key ++ " in " ++ show settingsFile)
-+           readSetting :: (Monad m, Read a) => String -> m a
-            readSetting key = case lookup key mySettings of
-                              Just xs ->
-                                  case maybeRead xs of
-@@ -985,6 +992,7 @@ handleProc pgm phase_name proc = do
-           then does_not_exist
-           else IO.ioError err
+ import Data.Time
+@@ -174,6 +178,54 @@ import Exception
+ import System.FilePath
  
-+    does_not_exist :: IO a
-     does_not_exist = throwGhcExceptionIO (InstallationError ("could not execute: " ++ pgm))
- 
- 
-@@ -1188,8 +1196,16 @@ linesPlatform xs =
- 
- #endif
- 
-+data LinkDynLibHook = LinkDynLibHook deriving Typeable
-+type instance Hook LinkDynLibHook =
-+  DynFlags -> [String] -> [PackageId] -> IO ()
+ -- -----------------------------------------------------------------------------
++-- Compilation state
++-- -----------------------------------------------------------------------------
 +
- linkDynLib :: DynFlags -> [String] -> [PackageId] -> IO ()
--linkDynLib dflags0 o_files dep_packages
-+linkDynLib dflags =
-+  fromMaybe linkDynLib' (lookupHook LinkDynLibHook $ hooks dflags) dflags
++-- | Status of a compilation to hard-code
++data HscStatus
++    = HscNotGeneratingCode
++    | HscUpToDate
++    | HscUpdateBoot
++    | HscRecomp CgGuts ModSummary
 +
-+linkDynLib' :: DynFlags -> [String] -> [PackageId] -> IO ()
-+linkDynLib' dflags0 o_files dep_packages
-  = do
-     let -- This is a rather ugly hack to fix dynamically linked
-         -- GHC on Windows. If GHC is linked with -threaded, then
++-- -----------------------------------------------------------------------------
++-- The Hsc monad: Passing an enviornment and warning state
++
++newtype Hsc a = Hsc (HscEnv -> WarningMessages -> IO (a, WarningMessages))
++
++instance Functor Hsc where
++    fmap = liftM
++
++instance Applicative Hsc where
++    pure = return
++    (<*>) = ap
++
++instance Monad Hsc where
++    return a    = Hsc $ \_ w -> return (a, w)
++    Hsc m >>= k = Hsc $ \e w -> do (a, w1) <- m e w
++                                   case k a of
++                                       Hsc k' -> k' e w1
++
++instance MonadIO Hsc where
++    liftIO io = Hsc $ \_ w -> do a <- io; return (a, w)
++
++instance HasDynFlags Hsc where
++    getDynFlags = Hsc $ \e w -> return (hsc_dflags e, w)
++
++runHsc :: HscEnv -> Hsc a -> IO a
++runHsc hsc_env (Hsc hsc) = do
++    (a, w) <- hsc hsc_env emptyBag
++    printOrThrowWarnings (hsc_dflags hsc_env) w
++    return a
++
++-- A variant of runHsc that switches in the DynFlags from the
++-- InteractiveContext before running the Hsc computation.
++--
++runInteractiveHsc :: HscEnv -> Hsc a -> IO a
++runInteractiveHsc hsc_env =
++  runHsc (hsc_env { hsc_dflags = ic_dflags (hsc_IC hsc_env) })
++
++-- -----------------------------------------------------------------------------
+ -- Source Errors
+ 
+ -- When the compiler (HscMain) discovers errors, it throws an
+diff --git a/compiler/main/InteractiveEval.hs b/compiler/main/InteractiveEval.hs
+index 635c194..439cc0c 100644
+--- a/compiler/main/InteractiveEval.hs
++++ b/compiler/main/InteractiveEval.hs
+@@ -44,6 +44,7 @@ import GhcMonad
+ import HscMain
+ import HsSyn
+ import HscTypes
++import BasicTypes ( HValue )
+ import InstEnv
+ import FamInstEnv ( FamInst, orphNamesOfFamInst )
+ import TyCon
+diff --git a/compiler/main/InteractiveEvalTypes.hs b/compiler/main/InteractiveEvalTypes.hs
+index 87027cf..e3324a3 100644
+--- a/compiler/main/InteractiveEvalTypes.hs
++++ b/compiler/main/InteractiveEvalTypes.hs
+@@ -15,11 +15,11 @@ module InteractiveEvalTypes (
+ #ifdef GHCI
+ 
+ import Id
++import BasicTypes
+ import Name
+ import RdrName
+ import TypeRep
+ import ByteCodeInstr
+-import ByteCodeLink
+ import SrcLoc
+ import Exception
+ import Control.Concurrent
+diff --git a/compiler/main/PipelineMonad.hs b/compiler/main/PipelineMonad.hs
+index e69de29..c81f1f2 100644
+--- a/compiler/main/PipelineMonad.hs
++++ b/compiler/main/PipelineMonad.hs
+@@ -0,0 +1,109 @@
++{-# LANGUAGE NamedFieldPuns #-}
++-- | The CompPipeline monad and associated ops
++--
++-- Defined in separate module so that it can safely be imported from Hooks
++module PipelineMonad (
++    CompPipeline(..), evalP
++  , PhasePlus(..)
++  , PipeEnv(..), PipeState(..), PipelineOutput(..)
++  , getPipeEnv, getPipeState, setDynFlags, setModLocation, setStubO 
++  ) where
++
++import MonadUtils
++import Outputable
++import DynFlags
++import DriverPhases
++import HscTypes
++import Module
++
++import Control.Monad
++
++newtype CompPipeline a = P { unP :: PipeEnv -> PipeState -> IO (PipeState, a) }
++
++evalP :: CompPipeline a -> PipeEnv -> PipeState -> IO a
++evalP f env st = liftM snd $ unP f env st
++
++instance Functor CompPipeline where
++    fmap = liftM
++
++instance Applicative CompPipeline where
++    pure = return
++    (<*>) = ap
++
++instance Monad CompPipeline where
++  return a = P $ \_env state -> return (state, a)
++  P m >>= k = P $ \env state -> do (state',a) <- m env state
++                                   unP (k a) env state'
++
++instance MonadIO CompPipeline where
++    liftIO m = P $ \_env state -> do a <- m; return (state, a)
++
++data PhasePlus = RealPhase Phase
++               | HscOut HscSource ModuleName HscStatus
++
++instance Outputable PhasePlus where
++    ppr (RealPhase p) = ppr p
++    ppr (HscOut {}) = text "HscOut"
++
++-- -----------------------------------------------------------------------------
++-- The pipeline uses a monad to carry around various bits of information
++
++-- PipeEnv: invariant information passed down
++data PipeEnv = PipeEnv {
++       pe_isHaskellishFile :: Bool,
++       stop_phase   :: Phase,       -- ^ Stop just before this phase
++       src_filename :: String,      -- ^ basename of original input source
++       src_basename :: String,      -- ^ basename of original input source
++       src_suffix   :: String,      -- ^ its extension
++       output_spec  :: PipelineOutput -- ^ says where to put the pipeline output
++  }
++
++-- PipeState: information that might change during a pipeline run
++data PipeState = PipeState {
++       hsc_env   :: HscEnv,
++          -- ^ only the DynFlags change in the HscEnv.  The DynFlags change
++          -- at various points, for example when we read the OPTIONS_GHC
++          -- pragmas in the Cpp phase.
++       maybe_loc :: Maybe ModLocation,
++          -- ^ the ModLocation.  This is discovered during compilation,
++          -- in the Hsc phase where we read the module header.
++       maybe_stub_o :: Maybe FilePath
++          -- ^ the stub object.  This is set by the Hsc phase if a stub
++          -- object was created.  The stub object will be joined with
++          -- the main compilation object using "ld -r" at the end.
++  }
++
++data PipelineOutput
++  = Temporary
++        -- ^ Output should be to a temporary file: we're going to
++        -- run more compilation steps on this output later.
++  | Persistent
++        -- ^ We want a persistent file, i.e. a file in the current directory
++        -- derived from the input filename, but with the appropriate extension.
++        -- eg. in "ghc -c Foo.hs" the output goes into ./Foo.o.
++  | SpecificFile
++        -- ^ The output must go into the specific outputFile in DynFlags.
++        -- We don't store the filename in the constructor as it changes
++        -- when doing -dynamic-too.
++    deriving Show
++
++getPipeEnv :: CompPipeline PipeEnv
++getPipeEnv = P $ \env state -> return (state, env)
++
++getPipeState :: CompPipeline PipeState
++getPipeState = P $ \_env state -> return (state, state)
++
++instance HasDynFlags CompPipeline where
++    getDynFlags = P $ \_env state -> return (state, hsc_dflags (hsc_env state))
++
++setDynFlags :: DynFlags -> CompPipeline ()
++setDynFlags dflags = P $ \_env state ->
++  return (state{hsc_env= (hsc_env state){ hsc_dflags = dflags }}, ())
++
++setModLocation :: ModLocation -> CompPipeline ()
++setModLocation loc = P $ \_env state ->
++  return (state{ maybe_loc = Just loc }, ())
++
++setStubO :: FilePath -> CompPipeline ()
++setStubO stub_o = P $ \_env state ->
++  return (state{ maybe_stub_o = Just stub_o }, ())
 diff --git a/compiler/typecheck/TcForeign.lhs b/compiler/typecheck/TcForeign.lhs
-index d755132..ec0068b 100644
+index cf5ed00..63eb020 100644
 --- a/compiler/typecheck/TcForeign.lhs
 +++ b/compiler/typecheck/TcForeign.lhs
-@@ -12,10 +12,25 @@ is restricted to what the outside world understands (read C), and this
- module checks to see if a foreign declaration has got a legal type.
+@@ -13,9 +13,19 @@ module checks to see if a foreign declaration has got a legal type.
  
  \begin{code}
-+{-# LANGUAGE TypeFamilies #-}
-+
  module TcForeign
-         (
-           tcForeignImports
+-        (
+-          tcForeignImports
++        ( tcForeignImports
          , tcForeignExports
 +
-+        -- Hooks and low-level exports for hooks
++        -- Low-level exports for hooks
 +        , isForeignImport, isForeignExport
 +        , tcFImport, tcFExport
-+        , TcForeignImportsHook (..)
 +        , tcForeignImports'
 +        , tcCheckFIType, checkCTarget, checkForeignArgs, checkForeignRes
 +        , normaliseFfiType
 +        , nonIOok, mustBeIO
 +        , checkSafe, noCheckSafe
-+        , TcForeignExportsHook (..)
 +        , tcForeignExports'
 +        , tcCheckFEType
          ) where
  
  #include "HsVersions.h"
-@@ -29,7 +44,7 @@ import TcEnv
+@@ -29,7 +39,7 @@ import TcEnv
  
  import FamInst
  import FamInstEnv
@@ -716,28 +1058,20 @@ index d755132..ec0068b 100644
  import Type
  import TypeRep
  import ForeignCall
-@@ -47,8 +62,10 @@ import Platform
+@@ -47,6 +57,7 @@ import Platform
  import SrcLoc
  import Bag
  import FastString
 +import Hooks
  
  import Control.Monad
-+import Data.Typeable (Typeable)
  \end{code}
+@@ -192,9 +203,13 @@ to the module's usages.
  
  \begin{code}
-@@ -191,10 +208,18 @@ to the module's usages.
- %************************************************************************
- 
- \begin{code}
-+data TcForeignImportsHook = TcForeignImportsHook deriving Typeable
-+type instance Hook TcForeignImportsHook = [LForeignDecl Name]
-+        -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
-+
  tcForeignImports :: [LForeignDecl Name] -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
 +tcForeignImports decls
-+  = getHooked TcForeignImportsHook tcForeignImports' >>= ($decls)
++  = getHooked tcForeignImportsHook tcForeignImports' >>= ($ decls)
 +
 +tcForeignImports' :: [LForeignDecl Name] -> TcM ([Id], [LForeignDecl Id], Bag GlobalRdrElt)
  -- For the (Bag GlobalRdrElt) result, 
@@ -747,18 +1081,12 @@ index d755132..ec0068b 100644
    = do { (ids, decls, gres) <- mapAndUnzip3M tcFImport $
                                 filter isForeignImport decls
         ; return (ids, decls, unionManyBags gres) }
-@@ -321,11 +346,20 @@ checkMissingAmpersand dflags arg_tys res_ty
- %************************************************************************
- 
+@@ -323,9 +338,14 @@ checkMissingAmpersand dflags arg_tys res_ty
  \begin{code}
-+data TcForeignExportsHook = TcForeignExportsHook deriving Typeable
-+type instance Hook TcForeignExportsHook = [LForeignDecl Name] 
-+                 -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
-+
  tcForeignExports :: [LForeignDecl Name]
                   -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
 +tcForeignExports decls =
-+  getHooked TcForeignExportsHook tcForeignExports' >>= ($decls)
++  getHooked tcForeignExportsHook tcForeignExports' >>= ($ decls)
 +
 +tcForeignExports' :: [LForeignDecl Name]
 +                 -> TcM (LHsBinds TcId, [LForeignDecl TcId], Bag GlobalRdrElt)
@@ -770,52 +1098,22 @@ index d755132..ec0068b 100644
    where
     combine (binds, fs, gres1) (L loc fe) = do
 diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
-index 2528e69..c79c6c5 100644
+index 2528e69..3596254 100644
 --- a/compiler/typecheck/TcSplice.lhs
 +++ b/compiler/typecheck/TcSplice.lhs
-@@ -8,11 +8,14 @@ TcSplice: Template Haskell splices
- 
- \begin{code}
- {-# OPTIONS_GHC -fno-warn-orphans #-}
-+{-# LANGUAGE TypeFamilies #-}
- module TcSplice( tcSpliceType, tcSpliceExpr, tcSpliceDecls, tcBracket,
-                  lookupThName_maybe,
-                  runQuasiQuoteExpr, runQuasiQuotePat,
-                  runQuasiQuoteDecl, runQuasiQuoteType,
--                 runAnnotation ) where
-+                 runAnnotation,
-+                 RunQuasiQuoteHook(..)
-+                 ) where
- 
- #include "HsVersions.h"
- 
-@@ -74,9 +77,11 @@ import Unique
- import Data.Maybe
- import BasicTypes
- import DynFlags
+@@ -49,6 +49,7 @@ import NameSet
+ import PrelNames
+ import HscTypes
+ import OccName
 +import Hooks
- import Panic
- import FastString
- import Control.Monad    ( when, zipWithM )
-+import Data.Typeable    ( Typeable )
- 
- import qualified Language.Haskell.TH as TH
- -- THSyntax gives access to internal functions and data types
-@@ -686,6 +691,9 @@ the splice is run by the *renamer* rather than the type checker.
- See Note [Quasi-quote overview] in TcSplice.
- 
- \begin{code}
-+data RunQuasiQuoteHook = RunQuasiQuoteHook deriving (Typeable)
-+type instance Hook RunQuasiQuoteHook = HsQuasiQuote Name -> RnM (HsQuasiQuote Name)
-+
- runQuasiQuote :: Outputable hs_syn
-               => HsQuasiQuote RdrName   -- Contains term of type QuasiQuoter, and the String
-               -> Name                   -- Of type QuasiQuoter -> String -> Q th_syn
-@@ -721,10 +729,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
+ import Var
+ import Module
+ import Annotations
+@@ -721,10 +722,12 @@ runQuasiQuote (HsQuasiQuote quoter q_span quote) quote_selector meta_ty meta_ops
          ; checkTc (not is_local) (quoteStageError quoter')
  
          ; traceTc "runQQ" (ppr quoter <+> ppr is_local)
-+        ; HsQuasiQuote quoter'' _ quote' <- getHooked RunQuasiQuoteHook return >>=
++        ; HsQuasiQuote quoter'' _ quote' <- getHooked runQuasiQuoteHook return >>=
 +             ($ HsQuasiQuote quoter' q_span quote)
  
            -- Build the expression
@@ -826,11 +1124,4 @@ index 2528e69..c79c6c5 100644
          ; let expr = L q_span $
                       HsApp (L q_span $
                              HsApp (L q_span (HsVar quote_selector)) quoterExpr) quoteExpr
-@@ -879,6 +889,7 @@ runMeta show_code run_and_convert expr
-         }}}
-   where
-     -- see Note [Concealed TH exceptions]
-+    fail_with_exn :: Exception e => String -> e -> TcM a
-     fail_with_exn phase exn = do
-         exn_msg <- liftIO $ Panic.safeShowException exn
-         let msg = vcat [text "Exception when trying to" <+> text phase <+> text "compile-time code:",
+ 

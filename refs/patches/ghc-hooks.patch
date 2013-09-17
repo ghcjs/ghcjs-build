@@ -211,7 +211,7 @@ index ac0b09c..0fc8e68 100644
             else do
                 dflags <- getDynFlags
 diff --git a/compiler/main/DriverPipeline.hs b/compiler/main/DriverPipeline.hs
-index a6567c8..356dec4 100644
+index 048896c..035d577 100644
 --- a/compiler/main/DriverPipeline.hs
 +++ b/compiler/main/DriverPipeline.hs
 @@ -23,17 +23,26 @@ module DriverPipeline (
@@ -408,7 +408,7 @@ index a6567c8..356dec4 100644
                     return ()
             return r
  
-+runHookedPhase :: PhasePlus -> FilePath -> DynFlags 
++runHookedPhase :: PhasePlus -> FilePath -> DynFlags
 +               -> CompPipeline (PhasePlus, FilePath)
 +runHookedPhase pp input dflags =
 +  lookupHook runPhaseHook runPhase dflags pp input dflags
@@ -444,34 +444,32 @@ index a6567c8..356dec4 100644
  -- | Each phase in the pipeline returns the next phase to execute, and the
  -- name of the file in which the output was placed.
 diff --git a/compiler/main/DynFlags.hs b/compiler/main/DynFlags.hs
-index ada18b5..afb0da4 100644
+index ada18b5..c7529ba 100644
 --- a/compiler/main/DynFlags.hs
 +++ b/compiler/main/DynFlags.hs
-@@ -167,6 +167,7 @@ import Control.Monad
- 
- import Data.Bits
- import Data.Char
-+import Data.Dynamic
- import Data.Int
- import Data.List
- import Data.Map (Map)
-@@ -670,6 +671,11 @@ data DynFlags = DynFlags {
+@@ -142,6 +142,7 @@ import Platform
+ import PlatformConstants
+ import Module
+ import PackageConfig
++import {-# SOURCE #-} Hooks
+ import {-# SOURCE #-} PrelNames ( mAIN )
+ import {-# SOURCE #-} Packages (PackageState)
+ import DriverPhases     ( Phase(..), phaseInputExt )
+@@ -670,6 +671,9 @@ data DynFlags = DynFlags {
    pluginModNames        :: [ModuleName],
    pluginModNameOpts     :: [(ModuleName,String)],
  
-+  -- The hooks field is Dynamic since we cannot let DynFlags depend
-+  -- on the Hooks module, this would break the DLL split on Windows
-+  hooks                 :: Dynamic,
-+
++  -- GHC API hooks
++  hooks                 :: Hooks,
 +
    --  For ghc -M
    depMakefile           :: FilePath,
    depIncludePkgDeps     :: Bool,
-@@ -1313,6 +1319,7 @@ defaultDynFlags mySettings =
+@@ -1313,6 +1317,7 @@ defaultDynFlags mySettings =
  
          pluginModNames          = [],
          pluginModNameOpts       = [],
-+        hooks                   = toDyn (),
++        hooks                   = emptyHooks,
  
          outputFile              = Nothing,
          dynOutputFile           = Nothing,
@@ -552,10 +550,10 @@ index 39e1e0a..a54185b 100644
  import BreakArray
  import InteractiveEval
 diff --git a/compiler/main/Hooks.lhs b/compiler/main/Hooks.lhs
-index e69de29..db2df18 100644
+index e69de29..24bfb10 100644
 --- a/compiler/main/Hooks.lhs
 +++ b/compiler/main/Hooks.lhs
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,80 @@
 +\section[Hooks]{Low level API hooks}
 +
 +\begin{code}
@@ -563,8 +561,6 @@ index e69de29..db2df18 100644
 +             , emptyHooks
 +             , lookupHook
 +             , getHooked
-+             , setHooks
-+             , getHooks
 +               -- the hooks:
 +             , dsForeignsHook
 +             , tcForeignImportsHook
@@ -597,7 +593,6 @@ index e69de29..db2df18 100644
 +import Type
 +import SrcLoc
 +
-+import Data.Dynamic
 +import Data.Maybe
 +\end{code}
 +
@@ -629,19 +624,27 @@ index e69de29..db2df18 100644
 +  , linkHook               :: Maybe (GhcLink -> DynFlags -> Bool -> HomePackageTable -> IO SuccessFlag)
 +  , runQuasiQuoteHook      :: Maybe (HsQuasiQuote Name -> RnM (HsQuasiQuote Name))
 +  , getValueSafelyHook     :: Maybe (HscEnv -> Name -> Type -> IO (Maybe HValue))
-+  } deriving Typeable
++  }
 +
 +getHooked :: (Functor f, HasDynFlags f) => (Hooks -> Maybe a) -> a -> f a
 +getHooked hook def = fmap (lookupHook hook def) getDynFlags
 +
 +lookupHook :: (Hooks -> Maybe a) -> a -> DynFlags -> a
-+lookupHook hook def = fromMaybe def . hook . getHooks
++lookupHook hook def = fromMaybe def . hook . hooks
 +
-+setHooks :: Hooks -> DynFlags -> DynFlags
-+setHooks h dflags = dflags { hooks = toDyn h }
++\end{code}
 +
-+getHooks :: DynFlags -> Hooks
-+getHooks dflags = fromDyn (hooks dflags) emptyHooks
+diff --git a/compiler/main/Hooks.lhs-boot b/compiler/main/Hooks.lhs-boot
+index e69de29..71b7bf2 100644
+--- a/compiler/main/Hooks.lhs-boot
++++ b/compiler/main/Hooks.lhs-boot
+@@ -0,0 +1,9 @@
++\begin{code}
++module Hooks where
++
++data Hooks
++
++emptyHooks :: Hooks
 +
 +\end{code}
 +
@@ -793,7 +796,7 @@ index 774f5be..39e483e 100644
      = throwIO (InstallationError "You can't call hscCompileCoreExpr in a profiled compiler")
              -- Otherwise you get a seg-fault when you run it
 diff --git a/compiler/main/HscTypes.lhs b/compiler/main/HscTypes.lhs
-index 33dbba2..dd2e3de 100644
+index 33dbba2..97dd9d9 100644
 --- a/compiler/main/HscTypes.lhs
 +++ b/compiler/main/HscTypes.lhs
 @@ -12,6 +12,10 @@ module HscTypes (
@@ -803,7 +806,7 @@ index 33dbba2..dd2e3de 100644
 +        HscStatus(..),
 +
 +        -- * Hsc monad
-+        Hsc(..), runHsc, runInteractiveHsc, 
++        Hsc(..), runHsc, runInteractiveHsc,
  
          -- * Information about modules
          ModDetails(..), emptyModDetails,
@@ -1124,4 +1127,3 @@ index 2528e69..3596254 100644
          ; let expr = L q_span $
                       HsApp (L q_span $
                              HsApp (L q_span (HsVar quote_selector)) quoterExpr) quoteExpr
- 

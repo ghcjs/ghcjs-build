@@ -91,7 +91,7 @@ index e69de29..2c6b128 100644
 +\end{code}
 \ No newline at end of file
 diff --git a/compiler/ghc.cabal.in b/compiler/ghc.cabal.in
-index 553d27d..b29bd25 100644
+index a0f3e64..1ed7e23 100644
 --- a/compiler/ghc.cabal.in
 +++ b/compiler/ghc.cabal.in
 @@ -134,6 +134,7 @@ Library
@@ -111,15 +111,15 @@ index 553d27d..b29bd25 100644
          DynFlags
          ErrUtils
 diff --git a/compiler/ghc.mk b/compiler/ghc.mk
-index 66548b6..2dfcebd 100644
+index bf0ecaa..4fdadd7 100644
 --- a/compiler/ghc.mk
 +++ b/compiler/ghc.mk
-@@ -446,7 +446,7 @@ compiler_stage3_SplitObjs = NO
+@@ -445,7 +445,7 @@ compiler_stage3_SplitObjs = NO
+ # We therefore need to split some of the modules off into a separate
  # DLL. This clump are the modules reachable from DynFlags:
  compiler_stage2_dll0_START_MODULE = DynFlags
- 
--compiler_stage2_dll0_MODULES =Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
-+compiler_stage2_dll0_MODULES =Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DsMonad DynFlags Encoding ErrUtils Exception FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hooks Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic PipelineMonad Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
+-compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BooleanFormula BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls ByteCodeLink CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DynFlags Encoding ErrUtils Exception ExtsCompat46 FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet ObjLink OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
++compiler_stage2_dll0_MODULES = Annotations Avail Bag BasicTypes BinIface Binary Bitmap BlockId BooleanFormula BreakArray BufWrite BuildTyCl ByteCodeAsm ByteCodeInstr ByteCodeItbls CLabel Class CmdLineParser Cmm CmmCallConv CmmExpr CmmInfo CmmMachOp CmmNode CmmType CmmUtils CoAxiom CodeGen.Platform CodeGen.Platform.ARM CodeGen.Platform.NoRegs CodeGen.Platform.PPC CodeGen.Platform.PPC_Darwin CodeGen.Platform.SPARC CodeGen.Platform.X86 CodeGen.Platform.X86_64 Coercion Config Constants CoreArity CoreFVs CoreLint CoreSubst CoreSyn CoreTidy CoreUnfold CoreUtils CostCentre DataCon Demand Digraph DriverPhases DsMonad DynFlags Encoding ErrUtils Exception ExtsCompat46 FamInst FamInstEnv FastBool FastFunctions FastMutInt FastString FastTypes Finder Fingerprint FiniteMap ForeignCall Hooks Hoopl Hoopl.Dataflow HsBinds HsDecls HsDoc HsExpr HsImpExp HsLit HsPat HsSyn HsTypes HsUtils HscTypes IOEnv Id IdInfo IfaceEnv IfaceSyn IfaceType InstEnv InteractiveEvalTypes Kind ListSetOps Literal LoadIface Maybes MkCore MkGraph MkId Module MonadUtils Name NameEnv NameSet OccName OccurAnal OptCoercion OrdList Outputable PackageConfig Packages Pair Panic PipelineMonad Platform PlatformConstants PprCmm PprCmmDecl PprCmmExpr PprCore PrelInfo PrelNames PrelRules Pretty PrimOp RdrName Reg RegClass Rules SMRep Serialized SrcLoc StaticFlags StgCmmArgRep StgCmmClosure StgCmmEnv StgCmmLayout StgCmmMonad StgCmmProf StgCmmTicky StgCmmUtils StgSyn Stream StringBuffer TcEvidence TcIface TcMType TcRnMonad TcRnTypes TcType TcTypeNats TrieMap TyCon Type TypeRep TysPrim TysWiredIn Unify UniqFM UniqSet UniqSupply Unique Util Var VarEnv VarSet
  
  compiler_stage2_dll0_HS_OBJS = \
      $(patsubst %,compiler/stage2/build/%.$(dyn_osuf),$(subst .,/,$(compiler_stage2_dll0_MODULES)))
@@ -444,7 +444,7 @@ index 048896c..035d577 100644
  -- | Each phase in the pipeline returns the next phase to execute, and the
  -- name of the file in which the output was placed.
 diff --git a/compiler/main/DynFlags.hs b/compiler/main/DynFlags.hs
-index ada18b5..c7529ba 100644
+index 6f528a2..63da5d6 100644
 --- a/compiler/main/DynFlags.hs
 +++ b/compiler/main/DynFlags.hs
 @@ -142,6 +142,7 @@ import Platform
@@ -455,7 +455,7 @@ index ada18b5..c7529ba 100644
  import {-# SOURCE #-} PrelNames ( mAIN )
  import {-# SOURCE #-} Packages (PackageState)
  import DriverPhases     ( Phase(..), phaseInputExt )
-@@ -670,6 +671,9 @@ data DynFlags = DynFlags {
+@@ -671,6 +672,9 @@ data DynFlags = DynFlags {
    pluginModNames        :: [ModuleName],
    pluginModNameOpts     :: [(ModuleName,String)],
  
@@ -465,7 +465,7 @@ index ada18b5..c7529ba 100644
    --  For ghc -M
    depMakefile           :: FilePath,
    depIncludePkgDeps     :: Bool,
-@@ -1313,6 +1317,7 @@ defaultDynFlags mySettings =
+@@ -1314,6 +1318,7 @@ defaultDynFlags mySettings =
  
          pluginModNames          = [],
          pluginModNameOpts       = [],
@@ -796,7 +796,7 @@ index 774f5be..39e483e 100644
      = throwIO (InstallationError "You can't call hscCompileCoreExpr in a profiled compiler")
              -- Otherwise you get a seg-fault when you run it
 diff --git a/compiler/main/HscTypes.lhs b/compiler/main/HscTypes.lhs
-index 33dbba2..97dd9d9 100644
+index 33dbba2..27a7e21 100644
 --- a/compiler/main/HscTypes.lhs
 +++ b/compiler/main/HscTypes.lhs
 @@ -12,6 +12,10 @@ module HscTypes (
@@ -843,7 +843,7 @@ index 33dbba2..97dd9d9 100644
 +    | HscRecomp CgGuts ModSummary
 +
 +-- -----------------------------------------------------------------------------
-+-- The Hsc monad: Passing an enviornment and warning state
++-- The Hsc monad: Passing an environment and warning state
 +
 +newtype Hsc a = Hsc (HscEnv -> WarningMessages -> IO (a, WarningMessages))
 +
@@ -1101,7 +1101,7 @@ index cf5ed00..63eb020 100644
    where
     combine (binds, fs, gres1) (L loc fe) = do
 diff --git a/compiler/typecheck/TcSplice.lhs b/compiler/typecheck/TcSplice.lhs
-index 2528e69..3596254 100644
+index 4a4a0f9..59e2a48 100644
 --- a/compiler/typecheck/TcSplice.lhs
 +++ b/compiler/typecheck/TcSplice.lhs
 @@ -49,6 +49,7 @@ import NameSet

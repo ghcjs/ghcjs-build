@@ -42,7 +42,11 @@ install_src_pkg 'test-framework' '0.8.0.1' &&
 install_src_pkg 'unix' '2.7.0.0' &&
 install_src_pkg 'process' '1.2.0.0' &&
 install_src_pkg 'bytestring' '0.10.3.0' &&
-install_src_pkg 'directory' '1.2.0.1.1'
+install_src_pkg 'directory' '1.2.0.1.1' &&
+install_src_pkg 'unordered-containers' '0.2.3.2.1' &&
+install_src_pkg 'primitive' '0.5.0.1.2' &&
+install_src_pkg 'haskell-src-exts' '1.13.5.0.1' &&
+install_src_pkg 'lens' '3.10.0.0.5' 
 ) &&
 
 touch /home/vagrant/build1 &&

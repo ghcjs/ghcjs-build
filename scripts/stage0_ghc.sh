@@ -7,34 +7,45 @@ echo "====================================" &&
 echo " Copy the ghc-build-refs into place" &&
 echo "====================================" &&
 
+cp -rf ghcjs-build-refs/alex . &&
+cp -rf ghcjs-build-refs/happy . &&
 cp -rf ghcjs-build-refs/cabal . &&
-cp -rf ghcjs-build-refs/ghc-source . &&
+# cp -rf ghcjs-build-refs/ghc-source . &&
 cp -rf ghcjs-build-refs/ghcjs . &&
 cp -rf ghcjs-build-refs/ghcjs-* . &&
-cp -rf ghcjs-build-refs/ghc-packages/libffi-tarballs ghc-source/ &&
-cp -rf ghcjs-build-refs/ghc-packages/utils/* ghc-source/utils/ &&
-cp -rf ghcjs-build-refs/ghc-packages/libraries/* ghc-source/libraries/ &&
+# some problems with the build of these, remove comments when fixed
+# cp -rf ghcjs-build-refs/ghc-packages/libffi-tarballs ghc-source/ &&
+# cp -rf ghcjs-build-refs/ghc-packages/utils/* ghc-source/utils/ &&
+# cp -rf ghcjs-build-refs/ghc-packages/libraries/* ghc-source/libraries/ &&
 
 echo "====================================" &&
 echo " cabal update" &&
 echo "====================================" &&
 
 (cabal update || cabal update || cabal update) &&
+cd alex  && cabal install && cd .. &&
+cd happy && cabal install && cd .. &&
+hash -r &&
 
-
-echo "====================================" &&
-echo " Patching GHC" &&
-echo "====================================" &&
-
+mkdir -p ghc-source &&
 cd ghc-source &&
-patch -p1 < /home/vagrant/ghcjs-build-refs/patches/ghc-hooks.patch &&
-# echo 'BuildFlavour = quick' > mk/build.mk &&
-# cat mk/build.mk.sample >> mk/build.mk &&
-# echo 'SRC_HC_OPTS     += -opta-U__i686' >> mk/build.mk 
+# remove when fixed refs build works again
+git clone https://github.com/ghc/ghc.git &&
+cd ghc &&
+#
 
 echo "====================================" &&
 echo " Installing GHC" &&
 echo "====================================" &&
+
+# remove this when haddock works again
+echo "HADDOCK_DOCS       = NO" > mk/build.mk &&
+cat mk/build.mk.sample >> mk/build.mk &&
+#
+
+# remove when fixed refs builds works again
+./sync-all get &&
+#
 
 perl boot && 
 ./configure --prefix=/home/vagrant/ghc &&
@@ -42,7 +53,7 @@ perl boot &&
 make -j5 &&
 make install &&
 hash -r &&
-cd .. &&
+cd &&
 
 touch /home/vagrant/build0 &&
 

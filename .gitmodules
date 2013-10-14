@@ -85,3 +85,9 @@
 [submodule "refs/ghcjs-boot"]
 	path = refs/ghcjs-boot
 	url = https://github.com/ghcjs/ghcjs-boot.git
+[submodule "refs/happy"]
+	path = refs/happy
+	url = https://github.com/simonmar/happy.git
+[submodule "refs/alex"]
+	path = refs/alex
+	url = https://github.com/simonmar/alex.git

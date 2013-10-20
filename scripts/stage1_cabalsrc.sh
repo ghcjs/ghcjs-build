@@ -44,6 +44,7 @@ install_src_pkg 'directory' '1.2.0.1.1' &&
 install_src_pkg 'unordered-containers' '0.2.3.2.1' &&
 install_src_pkg 'primitive' '0.5.0.1.2' &&
 install_src_pkg 'haskell-src-exts' '1.13.5.0.1' &&
+install_src_pkg 'haskell-src-exts' '1.14.0.1' &&
 install_src_pkg 'lens' '3.10.0.0.7' &&
 install_src_pkg 'parallel' '3.2.0.3.1'
 ) &&

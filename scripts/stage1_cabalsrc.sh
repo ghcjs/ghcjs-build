@@ -17,36 +17,10 @@ echo " Installing cabal-src-install\n and packages"
 echo "===================================="
 
 (cabal update || cabal update || cabal update) &&
-cabal install packedstring --ghc-options='-XStandaloneDeriving -XDeriveDataTypeable' &&
 cabal install cabal-src &&
 
 (cd pkg &&
-install_src_pkg 'bzlib-conduit' '0.2.1.1' &&
-install_src_pkg 'vector' '0.10.9' &&
-install_src_pkg 'optparse-applicative' '0.5.2.1.1' &&
-install_src_pkg 'MonadCatchIO-transformers' '0.3.0.0.1' &&
-install_src_pkg 'aeson' '0.6.1.0.1' &&
-install_src_pkg 'yaml' '0.8.2.3' &&
-install_src_pkg 'haskell-src-meta' '0.6.0.2.1' &&
-install_src_pkg 'th-orphans' '0.7.0.1.2' &&
-install_src_pkg 'th-lift' '0.5.5.0.1' &&
-install_src_pkg 'time' '1.4.0.2.1' &&
-install_src_pkg 'HTTP' '4000.2.6.0.1' &&
-install_src_pkg 'entropy' '0.2.2.2' &&
-install_src_pkg 'Tensor' '1.0.0.1.1' &&
-install_src_pkg 'jmacro' '0.7.0.3' &&
-install_src_pkg 'generic-deriving' '1.5.0.0.1' &&
-install_src_pkg 'test-framework' '0.8.0.1' &&
-install_src_pkg 'unix' '2.7.0.0' &&
-install_src_pkg 'process' '1.2.0.0' &&
-install_src_pkg 'bytestring' '0.10.3.0' &&
-install_src_pkg 'directory' '1.2.0.1.1' &&
-install_src_pkg 'unordered-containers' '0.2.3.2.1' &&
-install_src_pkg 'primitive' '0.5.0.1.2' &&
-install_src_pkg 'haskell-src-exts' '1.13.5.0.1' &&
-install_src_pkg 'haskell-src-exts' '1.14.0.1' &&
-install_src_pkg 'lens' '3.10.0.0.7' &&
-install_src_pkg 'parallel' '3.2.0.3.1'
+install_src_pkg 'jmacro' '0.7.0.3.1' 
 ) &&
 
 touch /home/vagrant/build1 &&

@@ -7,6 +7,7 @@ echo "===================================="
 echo " Installing GHCJS" 
 echo "===================================="
 
+rm -rf ~/.ghcjs &&
 cd ghcjs &&
 cabal install -j4 --enable-executable-dynamic --enable-tests &&
 

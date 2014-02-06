@@ -32,6 +32,7 @@ cd ghc-source &&
 # remove when fixed refs build works again
 git clone https://github.com/ghc/ghc.git &&
 cd ghc &&
+git checkout ghc-7.8 &&
 #
 
 echo "====================================" &&
@@ -39,12 +40,13 @@ echo " Installing GHC" &&
 echo "====================================" &&
 
 # remove this when haddock works again
-echo "HADDOCK_DOCS       = NO" > mk/build.mk &&
+# echo "HADDOCK_DOCS       = NO" > mk/build.mk &&
 cat mk/build.mk.sample >> mk/build.mk &&
 #
 
 # remove when fixed refs builds works again
 ./sync-all get &&
+./sync-all checkout ghc-7.8 &&
 #
 
 perl boot && 

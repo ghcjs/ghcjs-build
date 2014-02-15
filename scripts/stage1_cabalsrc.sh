@@ -17,11 +17,13 @@ echo " Installing cabal-src-install\n and packages"
 echo "===================================="
 
 (cabal update || cabal update || cabal update) &&
-cabal install cabal-src &&
 
-(cd pkg &&
-install_src_pkg 'jmacro' '0.7.0.3.1' 
-) &&
+# no cabal-src installed packages needed at this point!
+# cabal install cabal-src &&
+
+# (cd pkg &&
+# install_src_pkg 'jmacro' '0.7.0.3.1' 
+# ) &&
 
 touch /home/vagrant/build1 &&
 

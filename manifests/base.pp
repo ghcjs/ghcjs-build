@@ -49,7 +49,7 @@ exec { "unzip /home/vagrant/jsshell-linux-${jsshellArch}.zip -d jsshell":
   require => Package['unzip']
 }
 
-$nodeVersion = "v0.10.20"
+$nodeVersion = "v0.10.25"
 
 $nodeArch = $architecture ? { 
   /64/    => "x64",

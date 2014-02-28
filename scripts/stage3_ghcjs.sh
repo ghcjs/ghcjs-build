@@ -39,7 +39,7 @@ echo "====================================" &&
 cd &&
 cd ghcjs-examples/weblog &&
 ./build.sh &&
-cd ../.. &&
+cd &&
 
 cabal install warp-static &&
 

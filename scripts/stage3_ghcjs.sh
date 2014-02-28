@@ -7,18 +7,6 @@ echo "===================================="
 echo " Installing GHCJS" 
 echo "===================================="
 
-# this is a workaround for a bug in GHC 7.8rc1 that prevents lens from
-# being installed
-( mkdir lens-workaround &&
-cd lens-workaround &&
-cabal unpack lens-4.0.3 &&
-cd lens-4.0.3 &&
-(cabal install || cabal install) &&
-cd ../.. &&
-rm -r lens-workaround
-) &&
-# end workaround
-
 rm -rf ~/.ghcjs &&
 cd ghcjs &&
 cabal install -j4 --enable-executable-dynamic --enable-tests &&

@@ -33,15 +33,26 @@ cd ghc-source &&
 git clone https://github.com/ghc/ghc.git &&
 cd ghc &&
 git checkout ghc-7.8 &&
+# fix for #8817
+git cherry-pick b1ddec1e6d4695d71d38b59db26829d71ad784e1 &&
 #
 
 echo "====================================" &&
 echo " Installing GHC" &&
 echo "====================================" &&
 
-# remove this when haddock works again
-# echo "HADDOCK_DOCS       = NO" > mk/build.mk &&
+# echo "BuildFlavour = devel2" > mk/build.mk &&
+echo "BuildFlavour = perf" > mk/build.mk &&
 cat mk/build.mk.sample >> mk/build.mk &&
+echo "" >> mk/build.mk &&
+
+# uncomment these lines to get GHC built with assertion checking
+# echo "GhcStage2HcOpts = -O2 -fasm -DDEBUG" >> mk/build.mk &&
+# echo "GhcLibHcOpts    = -O2 -dcore-lint" >> mk/build.mk &&
+
+# echo "GhcLibWays     += p" >> mk/build.mk &&
+# echo "GhcLibWays     += dyn" >> mk/build.mk &&
+
 #
 
 # remove when fixed refs builds works again

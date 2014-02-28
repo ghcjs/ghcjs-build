@@ -18,12 +18,11 @@ echo "===================================="
 
 (cabal update || cabal update || cabal update) &&
 
-# no cabal-src installed packages needed at this point!
-# cabal install cabal-src &&
+cabal install cabal-src &&
 
-# (cd pkg &&
-# install_src_pkg 'jmacro' '0.7.0.3.1' 
-# ) &&
+(cd pkg &&
+ install_src_pkg 'lens' '4.0.4.1' 
+) &&
 
 touch /home/vagrant/build1 &&
 
